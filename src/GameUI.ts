@@ -67,13 +67,15 @@ export class GameUI {
 
     // Render drawn event just under the Event deck
     if (gameState.drawnEvent) {
-      this.ctx.fillStyle = 'purple'; // Lila for events
+      const eventColor = gameState.hoverDrawnEvent ? '#5b2d82' : 'purple';
+      this.ctx.fillStyle = eventColor; // Lila for events
       this.ctx.fillRect(this.canvas.width - 200, 470, 150, 50);
       this.ctx.fillStyle = 'white';
       this.ctx.fillText(gameState.drawnEvent.name, this.canvas.width - 180, 495);
 
       // Skip button
-      this.ctx.fillStyle = 'gray';
+      const skipColor = gameState.hoverSkip ? 'darkgray' : 'gray';
+      this.ctx.fillStyle = skipColor;
       this.ctx.fillRect(this.canvas.width - 200, 530, 70, 30);
       this.ctx.fillStyle = 'white';
       this.ctx.font = '14px sans-serif';

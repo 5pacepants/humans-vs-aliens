@@ -23,6 +23,8 @@ export class InputHandler {
     this.game.state.hoverPile = undefined;
     this.game.state.hoverCardIndex = undefined;
     this.game.state.hoverHex = undefined;
+    this.game.state.hoverDrawnEvent = false;
+    this.game.state.hoverSkip = false;
 
     if (x > this.canvas.width - 200) {
       if (y > 50 && y < 150) {
@@ -31,6 +33,10 @@ export class InputHandler {
         this.game.state.hoverPile = 'alien';
       } else if (y > 350 && y < 450) {
         this.game.state.hoverPile = 'event';
+      } else if (y > 470 && y < 520 && this.game.state.drawnEvent) {
+        this.game.state.hoverDrawnEvent = true;
+      } else if (y > 530 && y < 560 && this.game.state.drawnEvent) {
+        this.game.state.hoverSkip = true;
       } else if (y > 560 && y < 740) {
         const index = Math.floor((y - 560) / 60);
         if (index < this.game.state.drawnCards.length) {

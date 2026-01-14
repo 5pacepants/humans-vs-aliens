@@ -46,6 +46,8 @@ export interface GameState {
   hoverPile?: 'human' | 'alien' | 'event'; // hovered pile
   hoverCardIndex?: number; // index of hovered drawn card
   hoverHex?: { q: number; r: number }; // hovered hex
+  hoverDrawnEvent?: boolean; // hovered event card
+  hoverSkip?: boolean; // hovered skip button
   mouseX: number;
   mouseY: number;
   combatOrder: { hex: Hex; card: CharacterCard }[]; // sorted by initiative
