@@ -10,12 +10,22 @@ export class Board {
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
   private textureLoader: TextureLoader;
+  private offscreenCanvas: HTMLCanvasElement;
+  private offscreenCtx: CanvasRenderingContext2D;
+  private readonly SUPERSAMPLING_SCALE = 2; // 2x rendering for better quality
 
   constructor(canvas: HTMLCanvasElement, gameState: GameState) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.gameState = gameState;
     this.textureLoader = new TextureLoader();
+    
+    // Create offscreen canvas for high-quality terrain rendering
+    this.offscreenCanvas = document.createElement('canvas');
+    this.offscreenCtx = this.offscreenCanvas.getContext('2d')!;
+    this.offscreenCtx.imageSmoothingEnabled = true;
+    this.offscreenCtx.imageSmoothingQuality = 'high';
+    
     this.generateHexes();
     this.gameState.board = this.hexes; // Set board in state
     this.preloadTextures(); // Start loading textures
@@ -175,15 +185,15 @@ export class Board {
     }
     this.ctx.closePath();
 
-    // Try to draw texture with clipping
+    // Draw texture with clipping
     const texture = this.textureLoader.getTexture(hex.terrain);
     if (texture && texture.complete) {
       this.ctx.save();
       this.ctx.clip();
       
-      // Draw image scaled to hex
-      const imgSize = this.hexSize * 2;
-      this.ctx.drawImage(texture, x - this.hexSize, y - this.hexSize, imgSize, imgSize);
+      // Draw image scaled to hex - ensure full coverage
+      const imgSize = this.hexSize * 2.2; // Slightly larger to ensure full coverage
+      this.ctx.drawImage(texture, x - this.hexSize * 1.1, y - this.hexSize * 1.1, imgSize, imgSize);
       
       this.ctx.restore();
     } else {

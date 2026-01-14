@@ -99,10 +99,10 @@ export class GameUI {
     if (gameState.drawnCards.length > 0) {
       const cardsPerRow = 3;
       const cardStartX = deckX;
-      const cardStartY = 380;
-      const cardSpacing = 14;
-      const cardWidth = 200;
-      const cardHeight = 320;
+      const cardStartY = 320;
+      const cardSpacing = 21;
+      const cardWidth = 304;
+      const cardHeight = 487;
 
       for (let i = 0; i < gameState.drawnCards.length; i++) {
         const card = gameState.drawnCards[i];

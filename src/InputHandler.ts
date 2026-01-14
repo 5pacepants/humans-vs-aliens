@@ -41,14 +41,14 @@ export class InputHandler {
         this.game.state.hoverDrawnEvent = true;
       } else if (y > 350 && y < 380 && this.game.state.drawnEvent) {
         this.game.state.hoverSkip = true;
-      } else if (y > 350) {
+      } else if (y > 280) {
         // Drawn cards in 3-card grid (hover detection)
-        const cardWidth = 200;
-        const cardHeight = 320;
+        const cardWidth = 304;
+        const cardHeight = 487;
         const cardsPerRow = 3;
         const startX = uiX + 10;
-        const startY = 380;
-        const spacing = 14;
+        const startY = 320;
+        const spacing = 21;
 
         for (let i = 0; i < this.game.state.drawnCards.length; i++) {
           const row = Math.floor(i / cardsPerRow);
@@ -104,14 +104,14 @@ export class InputHandler {
       } else if (y > 350 && y < 380 && this.game.state.drawnEvent) {
         // Skip button
         this.game.skipEvent();
-      } else if (y > 350) {
+      } else if (y > 280) {
         // Drawn cards - handle card selection/placement
-        const cardWidth = 200;
-        const cardHeight = 320;
+        const cardWidth = 304;
+        const cardHeight = 487;
         const cardsPerRow = 3;
         const startX = uiX + 10;
-        const startY = 380;
-        const spacing = 14;
+        const startY = 320;
+        const spacing = 21;
 
         for (let i = 0; i < this.game.state.drawnCards.length; i++) {
           const row = Math.floor(i / cardsPerRow);
