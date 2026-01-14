@@ -35,11 +35,11 @@ export class InputHandler {
         this.game.state.hoverPile = 'human';
       } else if (y > 150 && y < 230) {
         this.game.state.hoverPile = 'alien';
-      } else if (y > 250 && y < 330) {
+      } else if (y > 210 && y < 280) {
         this.game.state.hoverPile = 'event';
-      } else if (y > 350 && y < 400 && this.game.state.drawnEvent) {
+      } else if (y > 290 && y < 340 && this.game.state.drawnEvent) {
         this.game.state.hoverDrawnEvent = true;
-      } else if (y > 410 && y < 440 && this.game.state.drawnEvent) {
+      } else if (y > 350 && y < 380 && this.game.state.drawnEvent) {
         this.game.state.hoverSkip = true;
       } else if (y > 350) {
         // Drawn cards in 3-card grid (hover detection)
@@ -95,13 +95,13 @@ export class InputHandler {
         if (!hasEvent && this.game.state.currentPlayer === 'alien') {
           this.game.drawCards();
         }
-      } else if (y > 250 && y < 330) {
+      } else if (y > 210 && y < 280) {
         // Event deck
         // TODO: handle event draw
-      } else if (y > 350 && y < 400 && this.game.state.drawnEvent) {
+      } else if (y > 290 && y < 340 && this.game.state.drawnEvent) {
         // Drawn event - resolve
         this.game.resolveEvent();
-      } else if (y > 410 && y < 440 && this.game.state.drawnEvent) {
+      } else if (y > 350 && y < 380 && this.game.state.drawnEvent) {
         // Skip button
         this.game.skipEvent();
       } else if (y > 350) {

@@ -19,10 +19,10 @@ export class GameUI {
     const uiX = boardWidth;
     const uiWidth = this.canvas.width - boardWidth;
 
-    // Clear UI area (right 40%)
+    // Draw UI background (right 40%)
     this.ctx.fillStyle = '#1a1a1a';
     this.ctx.fillRect(uiX, 0, uiWidth, this.canvas.height);
-
+    
     // Render phase/status info at top left
     this.ctx.fillStyle = 'white';
     this.ctx.font = '20px sans-serif';
@@ -91,6 +91,7 @@ export class GameUI {
       this.ctx.font = '14px sans-serif';
       const cardStartY = 380;
       const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
+      this.ctx.fillText('Skip', deckX + 10, 368);
       this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, 368);
     }
 

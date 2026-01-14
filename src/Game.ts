@@ -86,10 +86,13 @@ export class Game {
     }
   }
 
-  selectCard(card: CharacterCard) {
-    this.state.selectedCard = card;
-    this.state.drawnCards = []; // Clear drawn after selection
-    this.onUpdate();
+  selectCard(index: number) {
+    const card = this.state.drawnCards[index];
+    if (card) {
+      this.state.selectedCard = card;
+      this.state.drawnCards = []; // Clear drawn after selection
+      this.onUpdate();
+    }
   }
 
   placeCharacter(q: number, r: number) {

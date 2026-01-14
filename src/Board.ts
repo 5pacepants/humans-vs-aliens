@@ -81,12 +81,8 @@ export class Board {
   }
 
   render() {
-    // Clear only the left 60% (board area)
-    const boardWidth = this.canvas.width * 0.6;
-    this.ctx.clearRect(0, 0, boardWidth, this.canvas.height);
-    this.ctx.fillStyle = 'black';
-    this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
-
+    // Don't clear here - main.ts clears the whole canvas
+    // Just draw on the left 60%
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
     this.ctx.font = '12px sans-serif';
