@@ -26,24 +26,44 @@ export class InputHandler {
     this.game.state.hoverDrawnEvent = false;
     this.game.state.hoverSkip = false;
 
-    if (x > this.canvas.width - 200) {
-      if (y > 50 && y < 150) {
+    const boardWidth = this.canvas.width * 0.6;
+    const uiX = boardWidth; // Right 40% starts here
+
+    if (x > uiX) {
+      // UI area (right 40%)
+      if (y > 50 && y < 130) {
         this.game.state.hoverPile = 'human';
-      } else if (y > 200 && y < 300) {
+      } else if (y > 150 && y < 230) {
         this.game.state.hoverPile = 'alien';
-      } else if (y > 350 && y < 450) {
+      } else if (y > 250 && y < 330) {
         this.game.state.hoverPile = 'event';
-      } else if (y > 470 && y < 520 && this.game.state.drawnEvent) {
+      } else if (y > 350 && y < 400 && this.game.state.drawnEvent) {
         this.game.state.hoverDrawnEvent = true;
-      } else if (y > 530 && y < 560 && this.game.state.drawnEvent) {
+      } else if (y > 410 && y < 440 && this.game.state.drawnEvent) {
         this.game.state.hoverSkip = true;
-      } else if (y > 560 && y < 740) {
-        const index = Math.floor((y - 560) / 60);
-        if (index < this.game.state.drawnCards.length) {
-          this.game.state.hoverCardIndex = index;
+      } else if (y > 350) {
+        // Drawn cards in 3-card grid (hover detection)
+        const cardWidth = 200;
+        const cardHeight = 320;
+        const cardsPerRow = 3;
+        const startX = uiX + 10;
+        const startY = 380;
+        const spacing = 14;
+
+        for (let i = 0; i < this.game.state.drawnCards.length; i++) {
+          const row = Math.floor(i / cardsPerRow);
+          const col = i % cardsPerRow;
+          const cardX = startX + col * (cardWidth + spacing);
+          const cardY = startY + row * (cardHeight + spacing);
+
+          if (x >= cardX && x < cardX + cardWidth && y >= cardY && y < cardY + cardHeight) {
+            this.game.state.hoverCardIndex = i;
+            break;
+          }
         }
       }
     } else {
+      // Board area (left 60%)
       const hex = this.getHexAt(x, y);
       if (hex) {
         this.game.state.hoverHex = hex;
@@ -60,47 +80,72 @@ export class InputHandler {
     // If an event is pending, only allow resolve/skip clicks
     const hasEvent = this.game.state.drawnEvent !== undefined;
 
-    // Check if click on card piles (right side)
-    if (x > this.canvas.width - 200) {
-      if (y > 50 && y < 150) {
+    const boardWidth = this.canvas.width * 0.6;
+    const uiX = boardWidth;
+
+    // Check if click on UI area (right 40%)
+    if (x > uiX) {
+      if (y > 50 && y < 130) {
         // Human deck
         if (!hasEvent && this.game.state.currentPlayer === 'human') {
           this.game.drawCards();
         }
-      } else if (y > 200 && y < 300) {
+      } else if (y > 150 && y < 230) {
         // Alien deck
         if (!hasEvent && this.game.state.currentPlayer === 'alien') {
           this.game.drawCards();
         }
-      } else if (y > 350 && y < 450) {
+      } else if (y > 250 && y < 330) {
         // Event deck
         // TODO: handle event draw
-      } else if (y > 470 && y < 520 && this.game.state.drawnEvent) {
+      } else if (y > 350 && y < 400 && this.game.state.drawnEvent) {
         // Drawn event - resolve
         this.game.resolveEvent();
-      } else if (y > 530 && y < 560 && this.game.state.drawnEvent) {
+      } else if (y > 410 && y < 440 && this.game.state.drawnEvent) {
         // Skip button
         this.game.skipEvent();
-      } else if (y > 560 && y < 740) {
-        // Drawn cards
-        if (!hasEvent) {
-          const index = Math.floor((y - 560) / 60);
-          if (index < this.game.state.drawnCards.length) {
-            this.game.selectCard(this.game.state.drawnCards[index]);
+      } else if (y > 350) {
+        // Drawn cards - handle card selection/placement
+        const cardWidth = 200;
+        const cardHeight = 320;
+        const cardsPerRow = 3;
+        const startX = uiX + 10;
+        const startY = 380;
+        const spacing = 14;
+
+        for (let i = 0; i < this.game.state.drawnCards.length; i++) {
+          const row = Math.floor(i / cardsPerRow);
+          const col = i % cardsPerRow;
+          const cardX = startX + col * (cardWidth + spacing);
+          const cardY = startY + row * (cardHeight + spacing);
+
+          if (x >= cardX && x < cardX + cardWidth && y >= cardY && y < cardY + cardHeight) {
+            if (!hasEvent) {
+              this.game.selectCard(i);
+            }
+            break;
           }
         }
       }
     } else {
-      // Check if click on hex
-      const hex = this.getHexAt(x, y);
-      if (hex && !hasEvent) {
-        if (this.game.state.phase === 'placement' && this.game.state.selectedCard) {
-          this.game.placeCharacter(hex.q, hex.r);
-        } else if (this.game.state.phase === 'combat') {
-          if (this.game.state.selectedAttacker) {
-            this.game.attackTarget(hex.q, hex.r);
-          } else {
-            this.game.selectAttacker(hex.q, hex.r);
+      // Board area clicks - hex placement/combat
+      if (this.game.state.phase === 'placement') {
+        if (this.game.state.selectedCard !== undefined && !hasEvent) {
+          const hex = this.getHexAt(x, y);
+          if (hex) {
+            this.game.placeCharacter(hex.q, hex.r);
+          }
+        }
+      } else if (this.game.state.phase === 'combat') {
+        const hex = this.getHexAt(x, y);
+        if (hex) {
+          const placed = this.game.state.placedCharacters.find((pc: any) => pc.hex.q === hex.q && pc.hex.r === hex.r);
+          if (placed) {
+            if (this.game.state.selectedAttacker) {
+              this.game.attackTarget(hex.q, hex.r);
+            } else {
+              this.game.selectAttacker(hex.q, hex.r);
+            }
           }
         }
       }
@@ -126,6 +171,8 @@ export class InputHandler {
     const hexSize = 60;
     const x = hexSize * (3/2 * q);
     const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-    return { x: x + this.canvas.width / 2, y: y + this.canvas.height / 2 };
+    const boardWidth = this.canvas.width * 0.6; // Left 60%
+    const boardHeight = this.canvas.height;
+    return { x: x + boardWidth / 2, y: y + boardHeight / 2 };
   }
 }

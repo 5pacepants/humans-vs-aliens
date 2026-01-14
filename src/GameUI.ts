@@ -1,18 +1,29 @@
 // GameUI class for rendering UI elements like card piles
 
 import type { GameState } from './types';
+import { CardRenderer } from './CardRenderer';
 
 export class GameUI {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private cardRenderer: CardRenderer;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+    this.cardRenderer = new CardRenderer();
   }
 
   render(gameState: GameState) {
-    // Render phase
+    const boardWidth = this.canvas.width * 0.6;
+    const uiX = boardWidth;
+    const uiWidth = this.canvas.width - boardWidth;
+
+    // Clear UI area (right 40%)
+    this.ctx.fillStyle = '#1a1a1a';
+    this.ctx.fillRect(uiX, 0, uiWidth, this.canvas.height);
+
+    // Render phase/status info at top left
     this.ctx.fillStyle = 'white';
     this.ctx.font = '20px sans-serif';
     this.ctx.fillText(`Phase: ${gameState.phase.toUpperCase()}`, 50, 50);
@@ -31,57 +42,77 @@ export class GameUI {
         this.ctx.fillText(`Winner: ${gameState.winner.toUpperCase()}`, 50, 170);
       }
     }
+
+    // Right sidebar - deck piles and drawn cards
+    const deckX = uiX + 10;
+    const deckWidth = uiWidth - 20;
+    const deckHeight = 70;
+    const pileSpacing = 10;
+
+    // Human deck pile
     let color = gameState.hoverPile === 'human' ? 'darkgray' : 'gray';
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(this.canvas.width - 200, 50, 150, 100); // Human deck
+    this.ctx.fillRect(deckX, 50, deckWidth, deckHeight);
     this.ctx.fillStyle = 'white';
     this.ctx.font = '16px sans-serif';
-    this.ctx.fillText('Human Deck', this.canvas.width - 180, 80);
-    this.ctx.fillText(`${gameState.humanDeck.length} cards`, this.canvas.width - 180, 100);
+    this.ctx.fillText('Human Deck', deckX + 10, 75);
+    this.ctx.fillText(`${gameState.humanDeck.length} cards`, deckX + 10, 95);
 
+    // Alien deck pile
     color = gameState.hoverPile === 'alien' ? 'darkgray' : 'gray';
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(this.canvas.width - 200, 200, 150, 100); // Alien deck
+    this.ctx.fillRect(deckX, 130, deckWidth, deckHeight);
     this.ctx.fillStyle = 'white';
-    this.ctx.fillText('Alien Deck', this.canvas.width - 180, 230);
-    this.ctx.fillText(`${gameState.alienDeck.length} cards`, this.canvas.width - 180, 250);
+    this.ctx.fillText('Alien Deck', deckX + 10, 155);
+    this.ctx.fillText(`${gameState.alienDeck.length} cards`, deckX + 10, 175);
 
+    // Event deck pile
     color = gameState.hoverPile === 'event' ? 'darkgray' : 'gray';
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(this.canvas.width - 200, 350, 150, 100); // Event deck
+    this.ctx.fillRect(deckX, 210, deckWidth, deckHeight);
     this.ctx.fillStyle = 'white';
-    this.ctx.fillText('Event Deck', this.canvas.width - 180, 380);
-    this.ctx.fillText(`${gameState.eventDeck.length} cards`, this.canvas.width - 180, 400);
+    this.ctx.fillText('Event Deck', deckX + 10, 235);
+    this.ctx.fillText(`${gameState.eventDeck.length} cards`, deckX + 10, 255);
 
-    // Render drawn cards below piles (shifted down a bit)
-    if (gameState.drawnCards.length > 0) {
-      for (let i = 0; i < gameState.drawnCards.length; i++) {
-        const baseColor = gameState.drawnCards[i].faction === 'human' ? 'blue' : 'red';
-        const color = gameState.hoverCardIndex === i ? `dark${baseColor}` : baseColor;
-        this.ctx.fillStyle = color;
-        this.ctx.fillRect(this.canvas.width - 200, 560 + i * 60, 150, 50);
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillText(gameState.drawnCards[i].name, this.canvas.width - 180, 585 + i * 60);
-      }
-    }
-
-    // Render drawn event just under the Event deck
+    // Drawn event card
     if (gameState.drawnEvent) {
       const eventColor = gameState.hoverDrawnEvent ? '#5b2d82' : 'purple';
-      this.ctx.fillStyle = eventColor; // Lila for events
-      this.ctx.fillRect(this.canvas.width - 200, 470, 150, 50);
+      this.ctx.fillStyle = eventColor;
+      this.ctx.fillRect(deckX, 290, deckWidth, 50);
       this.ctx.fillStyle = 'white';
-      this.ctx.fillText(gameState.drawnEvent.name, this.canvas.width - 180, 495);
+      this.ctx.fillText(gameState.drawnEvent.name, deckX + 10, 320);
 
       // Skip button
       const skipColor = gameState.hoverSkip ? 'darkgray' : 'gray';
       this.ctx.fillStyle = skipColor;
-      this.ctx.fillRect(this.canvas.width - 200, 530, 70, 30);
+      const skipWidth = 70;
+      this.ctx.fillRect(deckX, 350, skipWidth, 30);
       this.ctx.fillStyle = 'white';
       this.ctx.font = '14px sans-serif';
-      this.ctx.fillText('Skip', this.canvas.width - 175, 550);
+      const cardStartY = 380;
       const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
-      this.ctx.fillText(`(${skips})`, this.canvas.width - 130, 550);
+      this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, 368);
+    }
+
+    // Render drawn cards in 3-column grid
+    if (gameState.drawnCards.length > 0) {
+      const cardsPerRow = 3;
+      const cardStartX = deckX;
+      const cardStartY = 380;
+      const cardSpacing = 14;
+      const cardWidth = 200;
+      const cardHeight = 320;
+
+      for (let i = 0; i < gameState.drawnCards.length; i++) {
+        const card = gameState.drawnCards[i];
+        const row = Math.floor(i / cardsPerRow);
+        const col = i % cardsPerRow;
+        const cardX = cardStartX + col * (cardWidth + cardSpacing);
+        const cardY = cardStartY + row * (cardHeight + cardSpacing);
+
+        // Use CardRenderer for visual cards
+        this.cardRenderer.renderCard(this.ctx, card, cardX, cardY, cardWidth, cardHeight);
+      }
     }
 
     // Draw cursor dot if holding a card

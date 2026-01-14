@@ -75,13 +75,17 @@ export class Board {
   private hexToPixel(q: number, r: number): { x: number; y: number } {
     const x = this.hexSize * (3/2 * q);
     const y = this.hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-    return { x: x + this.canvas.width / 2, y: y + this.canvas.height / 2 };
+    const boardWidth = this.canvas.width * 0.6; // Left 60% of screen
+    const boardHeight = this.canvas.height;
+    return { x: x + boardWidth / 2, y: y + boardHeight / 2 };
   }
 
   render() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Clear only the left 60% (board area)
+    const boardWidth = this.canvas.width * 0.6;
+    this.ctx.clearRect(0, 0, boardWidth, this.canvas.height);
     this.ctx.fillStyle = 'black';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
 
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
