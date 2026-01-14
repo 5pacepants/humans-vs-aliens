@@ -19,9 +19,16 @@ if (!ctx) throw new Error("No 2D context");
 const game = new Game(render);
 const board = new Board(canvas, game.state);
 const ui = new GameUI(canvas);
-const inputHandler = new InputHandler(canvas, game);
+new InputHandler(canvas, game);
 
 function render() {
+  if (!ctx) return;
+  // Clear entire canvas first
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Then render board and UI
   board.render();
   ui.render(game.state);
 }
