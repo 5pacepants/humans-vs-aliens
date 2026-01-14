@@ -1,10 +1,13 @@
 // Basic types for Humans vs Aliens MVP
 
+export type HexTerrain = 'grass' | 'water' | 'forest' | 'toxic' | 'mountain';
+
 export interface Hex {
   q: number; // axial coordinate q
   r: number; // axial coordinate r
   value: number; // scoring value, 0 if no value
   isMountain?: boolean; // if true, it's a mountain instead of value
+  terrain: HexTerrain; // visual terrain type
 }
 
 export interface CharacterStats {

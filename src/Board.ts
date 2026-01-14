@@ -1,25 +1,38 @@
 // Board class for hex-grid rendering
 
-import type { Hex, GameState } from './types';
+import type { Hex, GameState, HexTerrain } from './types';
+import { TextureLoader } from './TextureLoader';
 
 export class Board {
   private hexes: Hex[] = [];
-  private hexSize = 30;
+  private hexSize = 60;
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
+  private textureLoader: TextureLoader;
 
   constructor(canvas: HTMLCanvasElement, gameState: GameState) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.gameState = gameState;
+    this.textureLoader = new TextureLoader();
     this.generateHexes();
     this.gameState.board = this.hexes; // Set board in state
+    this.preloadTextures(); // Start loading textures
+  }
+
+  private preloadTextures() {
+    const terrains: HexTerrain[] = ['grass', 'water', 'forest', 'toxic', 'mountain'];
+    terrains.forEach(terrain => {
+      this.textureLoader.loadTexture(terrain).catch(err => console.warn(err));
+    });
   }
 
   private generateHexes() {
     // Smaller hex grid for visibility
     const maxRadius = 3; // smaller board
+    
+    // Step 1: create all hexes as grass with optional value
     for (let q = -maxRadius; q <= maxRadius; q++) {
       for (let r = -maxRadius; r <= maxRadius; r++) {
         if (Math.abs(q + r) <= maxRadius) {
@@ -28,18 +41,35 @@ export class Board {
           if (distance <= 2) { // central hexes have values
             value = Math.floor(Math.random() * 5) + 1;
           }
-          this.hexes.push({ q, r, value, isMountain: false });
+          this.hexes.push({ q, r, value, isMountain: false, terrain: 'grass' });
         }
       }
     }
-    // Set three random hexes as mountains (replace value)
+
+    // Helper to pick N distinct random hexes from a list
+    const pickRandom = (pool: Hex[], count: number): Hex[] => {
+      const selected: Hex[] = [];
+      for (let i = 0; i < count && pool.length > 0; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        selected.push(pool.splice(idx, 1)[0]);
+      }
+      return selected;
+    };
+
+    // Step 2: mountains (3) picked from valued central hexes (same behavior as before)
     const centralHexes = this.hexes.filter(h => h.value > 0);
-    for (let i = 0; i < 3 && centralHexes.length > 0; i++) {
-      const randomIndex = Math.floor(Math.random() * centralHexes.length);
-      const hex = centralHexes.splice(randomIndex, 1)[0];
+    pickRandom(centralHexes, 3).forEach(hex => {
       hex.isMountain = true;
       hex.value = 0;
-    }
+      hex.terrain = 'mountain';
+    });
+
+    // Step 3: water (2), forest (2), toxic (2) from remaining non-mountains
+    const available = this.hexes.filter(h => !h.isMountain);
+    pickRandom(available, 2).forEach(hex => { hex.terrain = 'water'; });
+    pickRandom(available, 2).forEach(hex => { hex.terrain = 'forest'; });
+    pickRandom(available, 2).forEach(hex => { hex.terrain = 'toxic'; });
+    // Remaining stay grass
   }
 
   private hexToPixel(q: number, r: number): { x: number; y: number } {
@@ -59,11 +89,10 @@ export class Board {
 
     for (const hex of this.hexes) {
       const { x, y } = this.hexToPixel(hex.q, hex.r);
-      if (hex.isMountain) {
-        this.drawMountainHex(x, y);
-      } else {
-        this.drawHex(x, y);
-      }
+      
+      // Draw terrain texture with clipping
+      this.drawTerrainHex(x, y, hex);
+      
       // Highlight hovered hex
       if (this.gameState.hoverHex && this.gameState.hoverHex.q === hex.q && this.gameState.hoverHex.r === hex.r) {
         this.ctx.strokeStyle = 'yellow';
@@ -134,8 +163,8 @@ export class Board {
     this.ctx.stroke();
   }
 
-  private drawMountainHex(x: number, y: number) {
-    this.ctx.fillStyle = 'gray';
+  private drawTerrainHex(x: number, y: number, hex: Hex) {
+    // Create hex path for clipping
     this.ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 3) * i;
@@ -145,7 +174,34 @@ export class Board {
       else this.ctx.lineTo(hx, hy);
     }
     this.ctx.closePath();
-    this.ctx.fill();
+
+    // Try to draw texture with clipping
+    const texture = this.textureLoader.getTexture(hex.terrain);
+    if (texture && texture.complete) {
+      this.ctx.save();
+      this.ctx.clip();
+      
+      // Draw image scaled to hex
+      const imgSize = this.hexSize * 2;
+      this.ctx.drawImage(texture, x - this.hexSize, y - this.hexSize, imgSize, imgSize);
+      
+      this.ctx.restore();
+    } else {
+      // Fallback: solid color while texture loads
+      const colorMap: Record<HexTerrain, string> = {
+        grass: '#7ba428',
+        water: '#2a5a8a',
+        forest: '#2d5a1a',
+        toxic: '#7a3a7a',
+        mountain: '#666666'
+      };
+      this.ctx.fillStyle = colorMap[hex.terrain];
+      this.ctx.fill();
+    }
+
+    // Draw hex outline
+    this.ctx.strokeStyle = 'white';
+    this.ctx.lineWidth = 2;
     this.ctx.stroke();
   }
 

@@ -123,7 +123,7 @@ export class InputHandler {
   }
 
   private hexToPixel(q: number, r: number): { x: number; y: number } {
-    const hexSize = 30;
+    const hexSize = 60;
     const x = hexSize * (3/2 * q);
     const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
     return { x: x + this.canvas.width / 2, y: y + this.canvas.height / 2 };
