@@ -289,6 +289,7 @@ export class Game {
     const card = this.state.drawnCards[index];
     if (card) {
       this.state.selectedCard = card;
+      this.state.drawnCardsBackup = [...this.state.drawnCards]; // Save backup before clearing
       this.state.drawnCards = []; // Clear drawn after selection
       this.onUpdate();
     }

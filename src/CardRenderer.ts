@@ -34,6 +34,49 @@ export class CardRenderer {
     ctx.drawImage(this.offscreenCanvas, x, y, width, height);
   }
 
+  // Render only frame and character image (for dragging preview)
+  renderFrameAndCharacter(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number) {
+    const scale = this.SUPERSAMPLING_SCALE;
+    this.offscreenCanvas.width = width * scale;
+    this.offscreenCanvas.height = height * scale;
+    this.offscreenCtx.clearRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+    this.offscreenCtx.scale(scale, scale);
+
+    const isHuman = card.faction === 'human';
+    const contentWidth = width * 0.85; // Approximate content area
+    const contentHeight = height * 0.85;
+    const imageAreaPadding = 8;
+    
+    // Calculate image area dimensions
+    const imageHeight = contentHeight * 0.6;
+    const baseImageW = contentWidth - imageAreaPadding * 2;
+    const baseImageH = imageHeight - 14;
+    const imageW = baseImageW * 1.15;
+    const imageH = baseImageH * 1.15;
+    
+    // Center the image
+    const imageX = (width - imageW) / 2;
+    const imageY = height * 0.05;
+    
+    // Frame dimensions
+    const frameY = isHuman ? imageY : imageY + (height * 0.072);
+    const frameH = isHuman ? imageH : imageH - (height * 0.144);
+    
+    // Clip and draw character image
+    this.offscreenCtx.save();
+    this.offscreenCtx.beginPath();
+    this.offscreenCtx.rect(imageX, imageY, imageW, imageH - (height * 0.164));
+    this.offscreenCtx.clip();
+    this.drawCharacterImage(this.offscreenCtx, imageX, imageY, imageW, imageH, card.faction);
+    this.offscreenCtx.restore();
+    
+    // Draw frame
+    this.drawFrame(this.offscreenCtx, imageX, frameY, imageW, frameH, card.faction);
+    
+    // Draw to main canvas
+    ctx.drawImage(this.offscreenCanvas, x, y, width, height);
+  }
+
   private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number) {
     // Card colors and dimensions based on faction
     const isHuman = card.faction === 'human';
@@ -83,7 +126,7 @@ export class CardRenderer {
     ctx.fillText(factionText, factionX, factionY);
 
     // Draw darker background section for stats in lower left corner
-    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 45;
+    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 35;
     const statsBgHeight = 58;
     const statsBgX = x + borderWidth + 5;
     const statsBgY = y + height - borderWidth - cardPadding - statsBgHeight;

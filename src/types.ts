@@ -50,6 +50,7 @@ export interface GameState {
   phase: 'placement' | 'combat' | 'scoring';
   turn: number;
   drawnCards: CharacterCard[]; // current drawn cards for selection
+  drawnCardsBackup?: CharacterCard[]; // backup of all drawn cards for right-click restore
   selectedCard?: CharacterCard; // selected for placement
   humanEventSkips: number; // 3 for human
   alienEventSkips: number; // 3 for alien
@@ -61,6 +62,9 @@ export interface GameState {
   hoverSkip?: boolean; // hovered skip button
   hoverCardScale?: number; // current scale of hovered card (for animation)
   hoverStartTime?: number; // timestamp when hover started
+  previewScale?: number; // current scale of card preview when dragging
+  previewTargetScale?: number; // target scale for preview animation
+  previewScaleStartTime?: number; // timestamp when preview scale animation started
   mouseX: number;
   mouseY: number;
   combatOrder: { hex: Hex; card: CharacterCard }[]; // sorted by initiative

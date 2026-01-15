@@ -9,6 +9,7 @@ export class InputHandler {
     this.game = game;
     this.canvas.addEventListener('click', this.handleClick.bind(this));
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
   }
 
   private handleMouseMove(event: MouseEvent) {
@@ -173,8 +174,23 @@ export class InputHandler {
     return closestHex;
   }
 
+  private handleRightClick(event: MouseEvent) {
+    event.preventDefault(); // Prevent context menu from showing
+    
+    // Deselect any selected card and restore all drawn cards
+    if (this.game.state.selectedCard !== undefined) {
+      this.game.state.selectedCard = undefined;
+      // Restore all cards from backup
+      if (this.game.state.drawnCardsBackup) {
+        this.game.state.drawnCards = [...this.game.state.drawnCardsBackup];
+        this.game.state.drawnCardsBackup = undefined;
+      }
+      this.game.update();
+    }
+  }
+
   private hexToPixel(q: number, r: number): { x: number; y: number } {
-    const hexSize = 60;
+    const hexSize = 100; // Must match Board.ts hexSize
     const x = hexSize * (3/2 * q);
     const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
     const boardWidth = this.canvas.width * 0.6; // Left 60%

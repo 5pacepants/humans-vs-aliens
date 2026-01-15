@@ -2,29 +2,37 @@
 
 import type { Hex, GameState, HexTerrain } from './types';
 import { TextureLoader } from './TextureLoader';
+import { CardRenderer } from './CardRenderer';
 
 export class Board {
   private hexes: Hex[] = [];
-  private hexSize = 60;
+  private hexSize = 100;
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
   private textureLoader: TextureLoader;
+  private cardRenderer: CardRenderer;
   private offscreenCanvas: HTMLCanvasElement;
   private offscreenCtx: CanvasRenderingContext2D;
   private readonly SUPERSAMPLING_SCALE = 2; // 2x rendering for better quality
+  private backgroundImage: HTMLImageElement;
 
   constructor(canvas: HTMLCanvasElement, gameState: GameState) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.gameState = gameState;
     this.textureLoader = new TextureLoader();
+    this.cardRenderer = new CardRenderer();
     
     // Create offscreen canvas for high-quality terrain rendering
     this.offscreenCanvas = document.createElement('canvas');
     this.offscreenCtx = this.offscreenCanvas.getContext('2d')!;
     this.offscreenCtx.imageSmoothingEnabled = true;
     this.offscreenCtx.imageSmoothingQuality = 'high';
+    
+    // Load background image
+    this.backgroundImage = new Image();
+    this.backgroundImage.src = '/background-hex.png';
     
     this.generateHexes();
     this.gameState.board = this.hexes; // Set board in state
@@ -92,10 +100,128 @@ export class Board {
 
   render() {
     // Don't clear here - main.ts clears the whole canvas
-    // Just draw on the left 60%
+    const boardWidth = this.canvas.width * 0.6;
+    
+    // Draw background image on left 60%
+    if (this.backgroundImage.complete) {
+      this.ctx.drawImage(this.backgroundImage, 0, 0, boardWidth, this.canvas.height);
+    }
+    
+    // Create very soft gradient transition between hex side and card side
+    const dividerX = boardWidth;
+    const gradientWidth = 100; // Much wider gradient for smoother blend
+    
+    // Create subtle gradient overlay
+    const gradient = this.ctx.createLinearGradient(dividerX - gradientWidth, 0, dividerX + gradientWidth, 0);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    gradient.addColorStop(0.4, 'rgba(50, 45, 60, 0.08)');
+    gradient.addColorStop(0.5, 'rgba(50, 45, 60, 0.12)');
+    gradient.addColorStop(0.6, 'rgba(50, 45, 60, 0.08)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(dividerX - gradientWidth, 0, gradientWidth * 2, this.canvas.height);
+    
+    // Draw hex info box at top right of board area
+    const infoBoxWidth = 470; // Increased by another 70
+    const infoBoxHeight = 180; // Increased by another 20
+    const infoBoxX = boardWidth - infoBoxWidth - 10; // 10px margin from right edge
+    const infoBoxY = 10;
+    const cornerRadius = 8;
+    
+    // Draw rounded rectangle background
+    this.ctx.fillStyle = 'gray';
+    this.ctx.beginPath();
+    this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
+    this.ctx.fill();
+    
+    // Draw thin off-white border with slight purple tint
+    this.ctx.strokeStyle = '#f5f2f8'; // Off-white with purple tint
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
+    this.ctx.stroke();
+    
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '16px sans-serif';
+    
+    if (this.gameState.hoverHex) {
+      // Find the hex being hovered
+      const hoveredHex = this.gameState.board.find(h => h.q === this.gameState.hoverHex!.q && h.r === this.gameState.hoverHex!.r);
+      if (hoveredHex) {
+        // Terrain type names and explanations
+        const terrainNames: Record<HexTerrain, string> = {
+          grass: 'Grass',
+          water: 'Water',
+          forest: 'Forest',
+          toxic: 'Toxic Swamp',
+          mountain: 'Mountain'
+        };
+        
+        const terrainExplanations: Record<HexTerrain, string> = {
+          grass: 'Neutral terrain without effects',
+          water: 'Water terrain',
+          forest: 'Forest terrain',
+          toxic: 'Toxic swamp terrain',
+          mountain: 'Impassable terrain'
+        };
+        
+        let yPos = infoBoxY + 25;
+        
+        // Environment (namefonten)
+        this.ctx.font = '700 18px "Smooch Sans", sans-serif';
+        this.ctx.fillText(`Environment: ${terrainNames[hoveredHex.terrain]}`, infoBoxX + 10, yPos);
+        yPos += 20;
+        
+        // Explanation (abilityfonten)
+        this.ctx.font = '16px Quicksand, sans-serif';
+        this.ctx.fillText(terrainExplanations[hoveredHex.terrain], infoBoxX + 10, yPos);
+        yPos += 25;
+        
+        // Check if a character is placed on this hex
+        const placedChar = this.gameState.placedCharacters.find(pc => pc.hex.q === hoveredHex.q && pc.hex.r === hoveredHex.r);
+        
+        if (placedChar) {
+          // Card name (namefonten)
+          this.ctx.font = '700 22px "Smooch Sans", sans-serif';
+          this.ctx.fillText(placedChar.card.name, infoBoxX + 10, yPos);
+          yPos += 20;
+          
+          // Type (namefonten)
+          this.ctx.font = '700 18px "Smooch Sans", sans-serif';
+          this.ctx.fillText(`Type: ${placedChar.card.type}`, infoBoxX + 10, yPos);
+          yPos += 20;
+          
+          // Stats (abilityfonten)
+          this.ctx.font = '16px Quicksand, sans-serif';
+          this.ctx.fillText(`Range: ${placedChar.card.stats.range}`, infoBoxX + 10, yPos);
+          yPos += 18;
+          this.ctx.fillText(`Attacks: ${placedChar.card.stats.attacks}`, infoBoxX + 10, yPos);
+          yPos += 18;
+          this.ctx.fillText(`Health: ${placedChar.card.stats.health}`, infoBoxX + 10, yPos);
+          yPos += 20;
+          
+          // Points calculation (abilityfonten)
+          const hexPoints = hoveredHex.value;
+          const cardPoints = placedChar.card.stats.points;
+          const totalPoints = hexPoints + cardPoints;
+          
+          if (hexPoints > 0) {
+            this.ctx.fillText(`Points: ${totalPoints} (${cardPoints}+${hexPoints})`, infoBoxX + 10, yPos);
+          } else {
+            this.ctx.fillText(`Points: ${cardPoints}`, infoBoxX + 10, yPos);
+          }
+        }
+      }
+    } else {
+      this.ctx.fillText('Hover over a hex', infoBoxX + 10, infoBoxY + 35);
+      this.ctx.fillText('for info', infoBoxX + 10, infoBoxY + 60);
+    }
+    
+    // Render hexes
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
-    this.ctx.font = '12px sans-serif';
+    this.ctx.font = '30px sans-serif';
 
     for (const hex of this.hexes) {
       const { x, y } = this.hexToPixel(hex.q, hex.r);
@@ -119,8 +245,14 @@ export class Board {
         this.drawHex(x, y);
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2;
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillText(placed.card.name[0], x + 10, y + 3); // Move to side
+        
+        // Render frame and character image below the value
+        const cardWidth = 100;
+        const cardHeight = 160;
+        const cardX = x - cardWidth / 2;
+        const cardY = y + 20; // Position below center/value
+        this.cardRenderer.renderFrameAndCharacter(this.ctx, placed.card, cardX, cardY, cardWidth, cardHeight);
+        
         // Highlight current active in combat
         if (this.gameState.phase === 'combat' && this.gameState.combatOrder[this.gameState.currentCombatIndex] === placed) {
           this.ctx.strokeStyle = 'yellow';
@@ -147,13 +279,62 @@ export class Board {
         this.drawHex(x, y);
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2;
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillText(this.gameState.selectedCard.name[0], x + 10, y + 3); // Move to side
       }
       // Render value last, on top
       if (!hex.isMountain && hex.value > 0) {
+        // Add very strong dark shadow for maximum visibility
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+        this.ctx.shadowBlur = 20;
+        this.ctx.shadowOffsetX = 4;
+        this.ctx.shadowOffsetY = 4;
+        
+        // Also add a black stroke outline
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 6;
+        this.ctx.strokeText(hex.value.toString(), x - 5, y + 5);
+        
+        // Then fill with white
         this.ctx.fillStyle = 'white';
         this.ctx.fillText(hex.value.toString(), x - 5, y + 5);
+        
+        // Reset shadow and stroke
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+      }
+    }
+
+    // Show card preview if hovering over a hex with a placed card
+    if (this.gameState.hoverHex && !this.gameState.selectedCard) {
+      const hoveredPlaced = this.gameState.placedCharacters.find(
+        pc => pc.hex.q === this.gameState.hoverHex!.q && pc.hex.r === this.gameState.hoverHex!.r
+      );
+      if (hoveredPlaced) {
+        const previewWidth = 250;
+        const previewHeight = 400;
+        const mouseX = this.gameState.mouseX;
+        const mouseY = this.gameState.mouseY;
+        const boardWidth = this.canvas.width * 0.6;
+        const boardCenterX = boardWidth / 2;
+        
+        let previewX: number;
+        let previewY = mouseY - previewHeight / 2; // Vertikalt centrerat med musen
+        
+        // Bestäm vänster eller höger sida baserat på musens X-position
+        if (mouseX < boardCenterX) {
+          // Vänster sida av brädet - visa kortet till höger om musen
+          previewX = mouseX + 30;
+        } else {
+          // Höger sida eller mittlinjen - visa kortet till vänster om musen
+          previewX = mouseX - previewWidth - 30;
+        }
+        
+        // Se till att kortet inte går utanför canvas
+        previewX = Math.max(10, Math.min(previewX, boardWidth - previewWidth - 10));
+        previewY = Math.max(10, Math.min(previewY, this.canvas.height - previewHeight - 10));
+        
+        this.cardRenderer.renderCard(this.ctx, hoveredPlaced.card, previewX, previewY, previewWidth, previewHeight);
       }
     }
 

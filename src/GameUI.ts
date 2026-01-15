@@ -7,11 +7,16 @@ export class GameUI {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private cardRenderer: CardRenderer;
+  private backgroundImage: HTMLImageElement;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.cardRenderer = new CardRenderer();
+    
+    // Load background image for UI area
+    this.backgroundImage = new Image();
+    this.backgroundImage.src = '/background-hex-3.png';
   }
 
   render(gameState: GameState) {
@@ -19,9 +24,24 @@ export class GameUI {
     const uiX = boardWidth;
     const uiWidth = this.canvas.width - boardWidth;
 
-    // Draw UI background (right 40%)
-    this.ctx.fillStyle = '#4a4a4a';
-    this.ctx.fillRect(uiX, 0, uiWidth, this.canvas.height);
+    // Draw background image for UI (right 40%)
+    if (this.backgroundImage.complete) {
+      this.ctx.drawImage(this.backgroundImage, uiX, 0, uiWidth, this.canvas.height);
+      
+      // Apply soft gradient fade on left edge
+      const gradientWidth = 120;
+      const fadeGradient = this.ctx.createLinearGradient(uiX, 0, uiX + gradientWidth, 0);
+      fadeGradient.addColorStop(0, 'rgba(74, 84, 98, 0.6)');
+      fadeGradient.addColorStop(0.5, 'rgba(74, 84, 98, 0.2)');
+      fadeGradient.addColorStop(1, 'rgba(74, 84, 98, 0)');
+      
+      this.ctx.fillStyle = fadeGradient;
+      this.ctx.fillRect(uiX, 0, gradientWidth, this.canvas.height);
+    } else {
+      // Fallback to gray background if image not loaded
+      this.ctx.fillStyle = '#4a4a4a';
+      this.ctx.fillRect(uiX, 0, uiWidth, this.canvas.height);
+    }
     
     // Render phase/status info at top left
     this.ctx.fillStyle = 'white';
@@ -54,8 +74,9 @@ export class GameUI {
     this.ctx.fillStyle = color;
     this.ctx.fillRect(deckX, 50, deckWidth, deckHeight);
     this.ctx.fillStyle = 'white';
-    this.ctx.font = '16px sans-serif';
+    this.ctx.font = '700 18px "Smooch Sans", sans-serif';
     this.ctx.fillText('Human Deck', deckX + 10, 75);
+    this.ctx.font = '16px Quicksand, sans-serif';
     this.ctx.fillText(`${gameState.humanDeck.length} cards`, deckX + 10, 95);
 
     // Alien deck pile
@@ -63,7 +84,9 @@ export class GameUI {
     this.ctx.fillStyle = color;
     this.ctx.fillRect(deckX, 130, deckWidth, deckHeight);
     this.ctx.fillStyle = 'white';
+    this.ctx.font = '700 18px "Smooch Sans", sans-serif';
     this.ctx.fillText('Alien Deck', deckX + 10, 155);
+    this.ctx.font = '16px Quicksand, sans-serif';
     this.ctx.fillText(`${gameState.alienDeck.length} cards`, deckX + 10, 175);
 
     // Event deck pile
@@ -71,7 +94,9 @@ export class GameUI {
     this.ctx.fillStyle = color;
     this.ctx.fillRect(deckX, 210, deckWidth, deckHeight);
     this.ctx.fillStyle = 'white';
+    this.ctx.font = '700 18px "Smooch Sans", sans-serif';
     this.ctx.fillText('Event Deck', deckX + 10, 235);
+    this.ctx.font = '16px Quicksand, sans-serif';
     this.ctx.fillText(`${gameState.eventDeck.length} cards`, deckX + 10, 255);
 
     // Drawn event card
@@ -94,6 +119,8 @@ export class GameUI {
       this.ctx.fillText('Skip', deckX + 10, 368);
       this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, 368);
     }
+
+    // Card preview moved to Board.ts for better positioning
 
     // Render drawn cards in 3-column grid
     if (gameState.drawnCards.length > 0) {
@@ -158,17 +185,44 @@ export class GameUI {
 
     // Draw cursor dot if holding a card
     if (gameState.selectedCard !== undefined) {
-      const color = gameState.selectedCard.faction === 'human' ? 'blue' : 'red';
-      this.ctx.fillStyle = color;
-      this.ctx.beginPath();
-      this.ctx.arc(gameState.mouseX, gameState.mouseY, 8, 0, 2 * Math.PI);
-      this.ctx.fill();
-      // Add white border for better visibility
-      this.ctx.strokeStyle = 'white';
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.arc(gameState.mouseX, gameState.mouseY, 8, 0, 2 * Math.PI);
-      this.ctx.stroke();
+      const boardWidth = this.canvas.width * 0.6;
+      const isOverBoard = gameState.mouseX < boardWidth;
+      
+      // Determine target scale based on location
+      const targetScale = isOverBoard ? 0.5 : 1.0;
+      
+      // Initialize or update target scale
+      if (gameState.previewTargetScale !== targetScale) {
+        gameState.previewTargetScale = targetScale;
+        gameState.previewScaleStartTime = Date.now();
+        if (gameState.previewScale === undefined) {
+          gameState.previewScale = targetScale; // First time, no animation
+        }
+      }
+      
+      // Animate scale from current to target over 300ms
+      const animationDuration = 300;
+      if (gameState.previewScaleStartTime !== undefined && gameState.previewScale !== undefined) {
+        const elapsed = Date.now() - gameState.previewScaleStartTime;
+        const progress = Math.min(elapsed / animationDuration, 1.0);
+        // Ease-out cubic for smoother animation
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const startScale = gameState.previewScale;
+        gameState.previewScale = startScale + (targetScale - startScale) * easedProgress;
+        
+        // Request another frame if animation not complete
+        if (progress < 1.0) {
+          requestAnimationFrame(() => this.render(gameState));
+        }
+      }
+      
+      // Use current scale for rendering
+      const currentScale = gameState.previewScale ?? 1.0;
+      const previewWidth = 200 * currentScale;
+      const previewHeight = 320 * currentScale;
+      const previewX = gameState.mouseX - previewWidth / 2;
+      const previewY = gameState.mouseY - previewHeight * 0.3;
+      this.cardRenderer.renderFrameAndCharacter(this.ctx, gameState.selectedCard, previewX, previewY, previewWidth, previewHeight);
     }
   }
 }
