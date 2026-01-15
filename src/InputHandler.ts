@@ -27,12 +27,26 @@ export class InputHandler {
     this.game.state.hoverHex = undefined;
     this.game.state.hoverDrawnEvent = false;
     this.game.state.hoverSkip = false;
+    this.game.state.hoverBattleButton = false;
 
     const boardWidth = this.canvas.width * 0.6;
     const uiX = boardWidth; // Right 40% starts here
 
     if (x > uiX) {
       // UI area (right 40%)
+      // Check for Battle button hover
+      if (this.game.state.phase === 'placement' && (this.game as any).allCardsPlaced && (this.game as any).allCardsPlaced()) {
+        const buttonWidth = 300;
+        const buttonHeight = 80;
+        const uiWidth = this.canvas.width - boardWidth;
+        const buttonX = uiX + (uiWidth - buttonWidth) / 2;
+        const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+
+        if (x >= buttonX && x < buttonX + buttonWidth && y >= buttonY && y < buttonY + buttonHeight) {
+          this.game.state.hoverBattleButton = true;
+        }
+      }
+
       // Cardback dimensions and positions
       const cardbackWidth = 304;
       const cardbackHeight = 487;
@@ -136,8 +150,37 @@ export class InputHandler {
     const boardWidth = this.canvas.width * 0.6;
     const uiX = boardWidth;
 
+    // Check for autoplace button click (testing feature)
+    if (this.game.state.phase === 'placement') {
+      const autoButtonWidth = 200;
+      const autoButtonHeight = 50;
+      const autoButtonX = boardWidth - autoButtonWidth - 20;
+      const autoButtonY = 20;
+      
+      if (x >= autoButtonX && x < autoButtonX + autoButtonWidth && 
+          y >= autoButtonY && y < autoButtonY + autoButtonHeight) {
+        (this.game as any).autoPlaceAll();
+        return;
+      }
+    }
+
     // Check if click on UI area (right 40%)
     if (x > uiX) {
+      // Check for Battle button hover and click
+      if (this.game.state.phase === 'placement' && (this.game as any).allCardsPlaced && (this.game as any).allCardsPlaced()) {
+        const buttonWidth = 300;
+        const buttonHeight = 80;
+        const uiWidth = this.canvas.width - boardWidth;
+        const buttonX = uiX + (uiWidth - buttonWidth) / 2;
+        const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+
+        if (x >= buttonX && x < buttonX + buttonWidth && y >= buttonY && y < buttonY + buttonHeight) {
+          this.game.state.hoverBattleButton = true;
+          (this.game as any).startBattle();
+          return;
+        }
+      }
+
       // Cardback dimensions and positions
       const cardbackWidth = 304;
       const cardbackHeight = 487;
@@ -191,10 +234,15 @@ export class InputHandler {
       const skipHitHeight = 140;
       const skipHitY = skipY + (skipHeight - skipHitHeight) / 2;
       
-      if (x >= skipX && x < skipX + skipWidth && y >= skipHitY && y < skipHitY + skipHitHeight && this.game.state.drawnEvent) {
-        // Drawn event - resolve
-        this.game.resolveEvent();
-      } else if (x >= skipX && x < skipX + skipWidth && y >= skipY && y < skipY + skipHeight && this.game.state.drawnEvent) {
+      // Click on event card to play it
+      if (x >= eventCardX && x < eventCardX + eventCardWidth && y >= eventCardY && y < eventCardY + eventCardHeight && this.game.state.drawnEvent) {
+        // Play the event (currently does nothing but advances turn)
+        this.game.state.drawnEvent = undefined;
+        this.game.advanceTurn();
+        this.game.onUpdate();
+      }
+      // Click on skip button
+      else if (x >= skipX && x < skipX + skipWidth && y >= skipHitY && y < skipHitY + skipHitHeight && this.game.state.drawnEvent) {
         // Skip button
         this.game.skipEvent();
       } else if (y > deckStartY + 100) {

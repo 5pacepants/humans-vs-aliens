@@ -20,7 +20,7 @@ export class CardRenderer {
     this.offscreenCtx.imageSmoothingQuality = 'high';
   }
 
-  renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard | EventCard, x: number, y: number, width: number, height: number) {
+  renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard | EventCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 17) {
     // Set up offscreen canvas with supersampling scale
     const scale = this.SUPERSAMPLING_SCALE;
     this.offscreenCanvas.width = width * scale;
@@ -36,7 +36,7 @@ export class CardRenderer {
       this.renderEventCardToContext(this.offscreenCtx, card, 0, 0, width, height);
     } else {
       // It's a CharacterCard
-      this.renderCardToContext(this.offscreenCtx, card, 0, 0, width, height);
+      this.renderCardToContext(this.offscreenCtx, card, 0, 0, width, height, abilityFontSize);
     }
 
     // Draw scaled-down result to main canvas
@@ -86,7 +86,7 @@ export class CardRenderer {
     ctx.drawImage(this.offscreenCanvas, x, y, width, height);
   }
 
-  private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number) {
+  private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 17) {
     // Card colors and dimensions based on faction
     const isHuman = card.faction === 'human';
     const borderColor = isHuman ? '#2a3a4d' : '#5a4570'; // Blue border for human, dark purple for alien
@@ -182,7 +182,7 @@ export class CardRenderer {
     // Draw text info at bottom
     const textY = imageY + imageHeight - 42; // Moved up 50 pixels from original position
     const textHeight = contentHeight - imageHeight - 16;
-    this.drawCardText(ctx, card, contentX, textY, contentWidth, textHeight);
+    this.drawCardText(ctx, card, contentX, textY, contentWidth, textHeight, abilityFontSize);
   }
 
   private renderEventCardToContext(ctx: CanvasRenderingContext2D, card: EventCard, x: number, y: number, width: number, height: number) {
@@ -389,7 +389,7 @@ export class CardRenderer {
     }
   }
 
-  private drawCardText(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number) {
+  private drawCardText(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 17) {
     // Offset for alien cards to account for larger frame
     const isHuman = card.faction === 'human';
     const offset = isHuman ? 0 : 5;
@@ -420,16 +420,14 @@ export class CardRenderer {
     ctx.fillText(card.type, typeX, y + 46 + offset);
 
     // Card description/ability
-    ctx.font = '22px Quicksand, sans-serif';
+    ctx.font = `${abilityFontSize}px Quicksand, sans-serif`;
     ctx.fillStyle = abilityColor;
     const ability = card.stats.ability || 'No ability';
     const wrappedText = this.wrapText(ability, width - 10, ctx);
     let textY = y + 72 + offset;
     wrappedText.forEach(line => {
-      if (textY < y + height - 40) {
-        ctx.fillText(line, x + 4, textY);
-        textY += 22;
-      }
+      ctx.fillText(line, x + 4, textY);
+      textY += 22;
     });
 
     // Stats lines

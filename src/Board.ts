@@ -150,7 +150,7 @@ export class Board {
       this.ctx.stroke();
       
       this.ctx.fillStyle = 'white';
-      this.ctx.font = '16px sans-serif';
+      this.ctx.font = '16px Quicksand, sans-serif';
       
       // Find the hex being hovered
       const hoveredHex = this.gameState.board.find(h => h.q === this.gameState.hoverHex!.q && h.r === this.gameState.hoverHex!.r);
@@ -224,7 +224,7 @@ export class Board {
     // Render hexes
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
-    this.ctx.font = '30px sans-serif';
+    this.ctx.font = '30px Quicksand, sans-serif';
 
     for (const hex of this.hexes) {
       const { x, y } = this.hexToPixel(hex.q, hex.r);
@@ -249,12 +249,7 @@ export class Board {
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2;
         
-        // Render frame and character image below the value
-        const cardWidth = 100;
-        const cardHeight = 160;
-        const cardX = x - cardWidth / 2;
-        const cardY = y + 20; // Position below center/value
-        this.cardRenderer.renderFrameAndCharacter(this.ctx, placed.card, cardX, cardY, cardWidth, cardHeight);
+        // Character image now drawn in drawTerrainHex for proper layering
         
         // Highlight current active in combat
         if (this.gameState.phase === 'combat' && this.gameState.combatOrder[this.gameState.currentCombatIndex] === placed) {
@@ -337,7 +332,7 @@ export class Board {
         previewX = Math.max(10, Math.min(previewX, boardWidth - previewWidth - 10));
         previewY = Math.max(10, Math.min(previewY, this.canvas.height - previewHeight - 10));
         
-        this.cardRenderer.renderCard(this.ctx, hoveredPlaced.card, previewX, previewY, previewWidth, previewHeight);
+        this.cardRenderer.renderCard(this.ctx, hoveredPlaced.card, previewX, previewY, previewWidth, previewHeight, 13);
       }
     }
     
@@ -361,7 +356,12 @@ export class Board {
   }
 
   private drawTerrainHex(x: number, y: number, hex: Hex) {
-    // Create hex path for clipping
+    // Check if this hex has a character placed
+    const placed = this.gameState.placedCharacters.find(pc => pc.hex.q === hex.q && pc.hex.r === hex.r);
+    
+    const texture = this.textureLoader.getTexture(hex.terrain);
+    
+    // Always draw full terrain first
     this.ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const angle = (Math.PI / 3) * i;
@@ -371,20 +371,14 @@ export class Board {
       else this.ctx.lineTo(hx, hy);
     }
     this.ctx.closePath();
-
-    // Draw texture with clipping
-    const texture = this.textureLoader.getTexture(hex.terrain);
+    
     if (texture && texture.complete) {
       this.ctx.save();
       this.ctx.clip();
-      
-      // Draw image scaled to hex - ensure full coverage
-      const imgSize = this.hexSize * 2.2; // Slightly larger to ensure full coverage
+      const imgSize = this.hexSize * 2.2;
       this.ctx.drawImage(texture, x - this.hexSize * 1.1, y - this.hexSize * 1.1, imgSize, imgSize);
-      
       this.ctx.restore();
     } else {
-      // Fallback: solid color while texture loads
       const colorMap: Record<HexTerrain, string> = {
         grass: '#7ba428',
         water: '#2a5a8a',
@@ -395,8 +389,69 @@ export class Board {
       this.ctx.fillStyle = colorMap[hex.terrain];
       this.ctx.fill();
     }
+    
+    // If character is placed, draw it in upper half
+    if (placed) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      
+      // Left point (angle 180° = π)
+      this.ctx.moveTo(x - this.hexSize, y);
+      
+      // Top-left point (angle 240° = 4π/3) 
+      const angle240 = 4 * Math.PI / 3;
+      this.ctx.lineTo(x + this.hexSize * Math.cos(angle240), y + this.hexSize * Math.sin(angle240));
+      
+      // Top-right point (angle 300° = 5π/3)
+      const angle300 = 5 * Math.PI / 3;
+      this.ctx.lineTo(x + this.hexSize * Math.cos(angle300), y + this.hexSize * Math.sin(angle300));
+      
+      // Right point (angle 0° = 0)
+      this.ctx.lineTo(x + this.hexSize, y);
+      
+      this.ctx.closePath();
+      this.ctx.clip();
+      
+      // Draw semi-transparent dark background in upper half first (so we can see the area)
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.fill();
+      
+      // Draw character image
+      const charImage = this.cardRenderer['assetLoader'].getAsset(
+        placed.card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder'
+      );
+      
+      console.log('Drawing character:', {
+        hasImage: !!charImage,
+        complete: charImage?.complete,
+        faction: placed.card.faction,
+        x, y
+      });
+      
+      if (charImage && charImage.complete) {
+        // Preserve image aspect ratio
+        const aspectRatio = charImage.width / charImage.height;
+        const imageHeight = this.hexSize * 2.0;
+        const imageWidth = imageHeight * aspectRatio;
+        const imageX = x - imageWidth / 2;
+        // Position image to show upper portion (face area) in the upper half of hex
+        const imageY = y + this.hexSize * 0.1 - imageHeight / 2;
+        this.ctx.drawImage(charImage, imageX, imageY, imageWidth, imageHeight);
+      }
+      
+      this.ctx.restore();
+    }
 
     // Draw hex outline
+    this.ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i;
+      const hx = x + this.hexSize * Math.cos(angle);
+      const hy = y + this.hexSize * Math.sin(angle);
+      if (i === 0) this.ctx.moveTo(hx, hy);
+      else this.ctx.lineTo(hx, hy);
+    }
+    this.ctx.closePath();
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
@@ -423,5 +478,53 @@ export class Board {
     }
     this.ctx.closePath();
     this.ctx.stroke();
+  }
+
+  private renderSplitHex(x: number, y: number, hex: Hex, card: any) {
+    // Split the hex: upper half shows character image, lower half shows terrain
+    
+    // Draw character image in upper half
+    this.ctx.save();
+    
+    // Create clipping path for upper half of hex
+    // Hex has flat sides on left/right, points on top/bottom
+    this.ctx.beginPath();
+    
+    // Top point (angle 270 degrees = -90)
+    this.ctx.moveTo(x, y - this.hexSize);
+    
+    // Top right point (angle 330 degrees = -30)
+    const angle330 = -Math.PI / 6;
+    this.ctx.lineTo(x + this.hexSize * Math.cos(angle330), y + this.hexSize * Math.sin(angle330));
+    
+    // Right middle (angle 0)
+    this.ctx.lineTo(x + this.hexSize, y);
+    
+    // Left middle (angle 180)
+    this.ctx.lineTo(x - this.hexSize, y);
+    
+    // Top left point (angle 210 degrees = -150)
+    const angle210 = -5 * Math.PI / 6;
+    this.ctx.lineTo(x + this.hexSize * Math.cos(angle210), y + this.hexSize * Math.sin(angle210));
+    
+    // Close to top
+    this.ctx.closePath();
+    this.ctx.clip();
+    
+    // Draw character image scaled to fit and positioned to show in upper half
+    const charImage = this.cardRenderer['assetLoader'].getAsset(
+      card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder'
+    );
+    
+    if (charImage && charImage.complete) {
+      const imageSize = this.hexSize * 2.0; // Make it large enough to cover upper half
+      const imageX = x - imageSize / 2;
+      const imageY = y - imageSize; // Position so bottom of image is at center of hex
+      this.ctx.drawImage(charImage, imageX, imageY, imageSize, imageSize);
+    }
+    
+    this.ctx.restore();
+    
+    // Lower half already shows terrain from the earlier drawTerrainHex call
   }
 }

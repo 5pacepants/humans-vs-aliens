@@ -19,10 +19,12 @@ export interface Hex {
 
 export interface CharacterStats {
   health: number;
+  damage: number; // attack damage value
   attacks: number;
   range: number;
   initiative: number;
   points: number; // end-game points
+  rareness: number; // 1=common, 4=rare
   ability?: string; // simple passive ability
 }
 
@@ -60,6 +62,7 @@ export interface GameState {
   hoverHex?: { q: number; r: number }; // hovered hex
   hoverDrawnEvent?: boolean; // hovered event card
   hoverSkip?: boolean; // hovered skip button
+  hoverBattleButton?: boolean; // hovered battle button
   hoverCardScale?: number; // current scale of hovered card (for animation)
   hoverStartTime?: number; // timestamp when hover started
   previewScale?: number; // current scale of card preview when dragging

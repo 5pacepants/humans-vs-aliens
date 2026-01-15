@@ -53,7 +53,7 @@ function render() {
   
   // Then render board and UI
   board.render();
-  ui.render(game.state);
+  ui.render(game.state, game);
 }
 
 render();

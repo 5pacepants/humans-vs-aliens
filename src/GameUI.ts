@@ -32,7 +32,7 @@ export class GameUI {
     this.cardbackEvent.src = '/cardback-event.png';
   }
 
-  render(gameState: GameState) {
+  render(gameState: GameState, game?: any) {
     const boardWidth = this.canvas.width * 0.6;
     const uiX = boardWidth;
     const uiWidth = this.canvas.width - boardWidth;
@@ -69,7 +69,7 @@ export class GameUI {
     
     // Render phase/status info at top left
     this.ctx.fillStyle = 'white';
-    this.ctx.font = '20px sans-serif';
+    this.ctx.font = '20px Quicksand, sans-serif';
     this.ctx.fillText(`Phase: ${gameState.phase.toUpperCase()}`, 50, 50);
     this.ctx.fillText(`Player: ${gameState.currentPlayer}`, 50, 80);
     if (gameState.phase === 'combat') {
@@ -78,12 +78,6 @@ export class GameUI {
         this.ctx.fillText('Select target to attack', 50, 140);
       } else {
         this.ctx.fillText('Select your unit to attack', 50, 140);
-      }
-    } else if (gameState.phase === 'scoring') {
-      this.ctx.fillText(`Human Score: ${gameState.humanScore}`, 50, 110);
-      this.ctx.fillText(`Alien Score: ${gameState.alienScore}`, 50, 140);
-      if (gameState.winner) {
-        this.ctx.fillText(`Winner: ${gameState.winner.toUpperCase()}`, 50, 170);
       }
     }
 
@@ -116,9 +110,18 @@ export class GameUI {
       const x = cardbackStartX - (w - cardbackWidth) / 2;
       const y = cardbackStartY - (h - cardbackHeight) / 2;
       
-      // Shadow effect - red for active, white for inactive
-      if (isActive) {
-        this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+      // Desaturate if not selectable
+      if (!isActive) {
+        this.ctx.filter = 'brightness(0.6) saturate(0.3)';
+      }
+      
+      // Shadow effect - red for hover when active, gray when not active, white otherwise
+      if (gameState.hoverPile === 'human') {
+        if (isActive) {
+          this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+        } else {
+          this.ctx.shadowColor = 'rgba(128, 128, 128, 1.0)'; // Gray hover
+        }
         this.ctx.shadowBlur = 30;
       } else {
         this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
@@ -129,17 +132,25 @@ export class GameUI {
       this.ctx.drawImage(this.cardbackHuman, x, y, w, h);
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
+      this.ctx.filter = 'none'; // Reset filter
       
-      // Show card count on top of cardback
+      // Show card count on top of cardback - same shadow style as hex numbers
       this.ctx.fillStyle = 'white';
       this.ctx.font = '700 24px "Smooch Sans", sans-serif';
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowOffsetX = 2;
-      this.ctx.shadowOffsetY = 2;
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+      this.ctx.shadowBlur = 20;
+      this.ctx.shadowOffsetX = 4;
+      this.ctx.shadowOffsetY = 4;
       const humanText = `${gameState.humanDeck.length} cards`;
       const humanTextWidth = this.ctx.measureText(humanText).width;
-      this.ctx.fillText(humanText, x + (w - humanTextWidth) / 2, y + h - 15);
+      // Use base position so text doesn't move with hover scale
+      const humanTextX = cardbackStartX + (cardbackWidth - humanTextWidth) / 2;
+      const humanTextY = cardbackStartY + cardbackHeight - 25; // Moved up 10px (was -15)
+      // Add stroke outline like hex numbers
+      this.ctx.strokeStyle = 'black';
+      this.ctx.lineWidth = 6;
+      this.ctx.strokeText(humanText, humanTextX, humanTextY);
+      this.ctx.fillText(humanText, humanTextX, humanTextY);
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
       this.ctx.shadowOffsetX = 0;
@@ -156,9 +167,18 @@ export class GameUI {
       const x = baseX - (w - cardbackWidth) / 2;
       const y = cardbackStartY - (h - cardbackHeight) / 2;
       
-      // Shadow effect - red for active, white for inactive
-      if (isActive) {
-        this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+      // Desaturate if not selectable
+      if (!isActive) {
+        this.ctx.filter = 'brightness(0.6) saturate(0.3)';
+      }
+      
+      // Shadow effect - red for hover when active, gray when not active, white otherwise
+      if (gameState.hoverPile === 'alien') {
+        if (isActive) {
+          this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+        } else {
+          this.ctx.shadowColor = 'rgba(128, 128, 128, 1.0)'; // Gray hover
+        }
         this.ctx.shadowBlur = 30;
       } else {
         this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
@@ -169,17 +189,25 @@ export class GameUI {
       this.ctx.drawImage(this.cardbackAlien, x, y, w, h);
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
+      this.ctx.filter = 'none'; // Reset filter
       
-      // Show card count on top of cardback
+      // Show card count on top of cardback - same shadow style as hex numbers
       this.ctx.fillStyle = 'white';
       this.ctx.font = '700 24px "Smooch Sans", sans-serif';
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowOffsetX = 2;
-      this.ctx.shadowOffsetY = 2;
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+      this.ctx.shadowBlur = 20;
+      this.ctx.shadowOffsetX = 4;
+      this.ctx.shadowOffsetY = 4;
       const alienText = `${gameState.alienDeck.length} cards`;
       const alienTextWidth = this.ctx.measureText(alienText).width;
-      this.ctx.fillText(alienText, x + (w - alienTextWidth) / 2, y + h - 15);
+      // Use base position so text doesn't move with hover scale
+      const alienTextX = baseX + (cardbackWidth - alienTextWidth) / 2;
+      const alienTextY = cardbackStartY + cardbackHeight - 25; // Moved up 10px
+      // Add stroke outline like hex numbers
+      this.ctx.strokeStyle = 'black';
+      this.ctx.lineWidth = 6;
+      this.ctx.strokeText(alienText, alienTextX, alienTextY);
+      this.ctx.fillText(alienText, alienTextX, alienTextY);
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
       this.ctx.shadowOffsetX = 0;
@@ -196,9 +224,18 @@ export class GameUI {
       const x = baseX - (w - cardbackWidth) / 2;
       const y = cardbackStartY - (h - cardbackHeight) / 2;
       
-      // Shadow effect - red for active, white for inactive
-      if (isActive) {
-        this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+      // Desaturate if not selectable
+      if (!isActive) {
+        this.ctx.filter = 'brightness(0.6) saturate(0.3)';
+      }
+      
+      // Shadow effect - red for hover when active, gray when not active, white otherwise
+      if (gameState.hoverPile === 'event') {
+        if (isActive) {
+          this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+        } else {
+          this.ctx.shadowColor = 'rgba(128, 128, 128, 1.0)'; // Gray hover
+        }
         this.ctx.shadowBlur = 30;
       } else {
         this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
@@ -209,17 +246,25 @@ export class GameUI {
       this.ctx.drawImage(this.cardbackEvent, x, y, w, h);
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
+      this.ctx.filter = 'none'; // Reset filter
       
-      // Show card count on top of cardback
+      // Show card count on top of cardback - same shadow style as hex numbers
       this.ctx.fillStyle = 'white';
       this.ctx.font = '700 24px "Smooch Sans", sans-serif';
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowOffsetX = 2;
-      this.ctx.shadowOffsetY = 2;
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+      this.ctx.shadowBlur = 20;
+      this.ctx.shadowOffsetX = 4;
+      this.ctx.shadowOffsetY = 4;
       const eventText = `${gameState.eventDeck.length} cards`;
       const eventTextWidth = this.ctx.measureText(eventText).width;
-      this.ctx.fillText(eventText, x + (w - eventTextWidth) / 2, y + h - 15);
+      // Use base position so text doesn't move with hover scale
+      const eventTextX = baseX + (cardbackWidth - eventTextWidth) / 2;
+      const eventTextY = cardbackStartY + cardbackHeight - 25; // Moved up 10px
+      // Add stroke outline like hex numbers
+      this.ctx.strokeStyle = 'black';
+      this.ctx.lineWidth = 6;
+      this.ctx.strokeText(eventText, eventTextX, eventTextY);
+      this.ctx.fillText(eventText, eventTextX, eventTextY);
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
       this.ctx.shadowOffsetX = 0;
@@ -316,7 +361,7 @@ export class GameUI {
         // Apply hover scale to text size too
         const baseFontSize = 20;
         const scaledFontSize = baseFontSize * hoverScale;
-        this.ctx.font = `bold ${scaledFontSize}px sans-serif`;
+        this.ctx.font = `bold ${scaledFontSize}px Quicksand, sans-serif`;
         
         this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
         this.ctx.shadowBlur = 20;
@@ -349,7 +394,7 @@ export class GameUI {
         const skipWidth = 70;
         this.ctx.fillRect(deckX, skipY, skipWidth, 30);
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '14px sans-serif';
+        this.ctx.font = '14px Quicksand, sans-serif';
         const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
         this.ctx.fillText('Skip', deckX + 10, skipY + 18);
         this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, skipY + 18);
@@ -472,5 +517,131 @@ export class GameUI {
       const previewY = gameState.mouseY - previewHeight * 0.3;
       this.cardRenderer.renderFrameAndCharacter(this.ctx, gameState.selectedCard, previewX, previewY, previewWidth, previewHeight);
     }
+
+    // Autoplace button (for testing - remove later)
+    if (gameState.phase === 'placement' && (gameState.humanDeck.length > 0 || gameState.alienDeck.length > 0)) {
+      const autoButtonWidth = 200;
+      const autoButtonHeight = 50;
+      const autoButtonX = boardWidth - autoButtonWidth - 20;
+      const autoButtonY = 20;
+
+      this.ctx.fillStyle = '#4a4a4a';
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 2;
+      this.roundedRect(this.ctx, autoButtonX, autoButtonY, autoButtonWidth, autoButtonHeight, 8);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = 'bold 18px Quicksand, sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('AUTOPLACE ALL', autoButtonX + autoButtonWidth / 2, autoButtonY + autoButtonHeight / 2);
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'alphabetic';
+    }
+
+    // Battle button if all cards are placed
+    if (game && game.allCardsPlaced && game.allCardsPlaced() && gameState.phase === 'placement') {
+      console.log('Showing battle button');
+      const buttonWidth = 300;
+      const buttonHeight = 80;
+      const buttonX = uiX + (uiWidth - buttonWidth) / 2;
+      const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+
+      // Draw button background with hover effect
+      this.ctx.fillStyle = gameState.hoverBattleButton ? '#6B0A0A' : '#8B1A1A';
+      this.ctx.strokeStyle = '#F0D4A8';
+      this.ctx.lineWidth = 4;
+      this.roundedRect(this.ctx, buttonX, buttonY, buttonWidth, buttonHeight, 10);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Draw button text
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.font = 'bold 36px "Smooch Sans", sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      
+      // Add shadow to text
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowOffsetX = 3;
+      this.ctx.shadowOffsetY = 3;
+      
+      this.ctx.fillText('BATTLE!', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+      
+      // Reset shadow
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'alphabetic';
+    }
+
+    // Scoring modal in center of board
+    if (gameState.phase === 'scoring') {
+      const boardWidth = this.canvas.width * 0.6;
+      const modalWidth = 600;
+      const modalHeight = 400;
+      const modalX = (boardWidth - modalWidth) / 2;
+      const modalY = (this.canvas.height - modalHeight) / 2;
+
+      // Draw semi-transparent backdrop
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
+
+      // Draw modal background
+      this.ctx.fillStyle = '#2a1810';
+      this.ctx.strokeStyle = '#F0D4A8';
+      this.ctx.lineWidth = 6;
+      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 20);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Draw title
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.font = 'bold 48px "Smooch Sans", sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowOffsetX = 3;
+      this.ctx.shadowOffsetY = 3;
+      this.ctx.fillText('BATTLE RESULTS', modalX + modalWidth / 2, modalY + 70);
+
+      // Draw scores
+      this.ctx.font = 'bold 36px "Smooch Sans", sans-serif';
+      this.ctx.fillText(`Humans: ${gameState.humanScore}`, modalX + modalWidth / 2, modalY + 160);
+      this.ctx.fillText(`Aliens: ${gameState.alienScore}`, modalX + modalWidth / 2, modalY + 210);
+
+      // Draw winner
+      if (gameState.winner) {
+        this.ctx.font = 'bold 56px "Smooch Sans", sans-serif';
+        this.ctx.fillStyle = gameState.winner === 'human' ? '#4A90E2' : '#E24A4A';
+        this.ctx.fillText(`${gameState.winner.toUpperCase()} WIN!`, modalX + modalWidth / 2, modalY + 300);
+      }
+
+      // Reset shadow and alignment
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'alphabetic';
+    }
+  }
+
+  private roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
   }
 }

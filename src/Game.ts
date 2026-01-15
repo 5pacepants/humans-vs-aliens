@@ -32,122 +32,73 @@ export class Game {
   private createHumanDeck(): CharacterCard[] {
     const cards: CharacterCard[] = [];
     
-    // Example cards with specific names and types
-    // You can customize these names and create unique characters
+    // New character design from GOALS.md
     
-    // 5 Soldiers
     cards.push({ 
-      id: 'h_soldier_0', 
+      id: 'h_commander_0', 
       faction: 'human', 
-      name: 'Corporal Hayes', 
-      type: 'Soldier',
-      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
-    });
-    cards.push({ 
-      id: 'h_soldier_1', 
-      faction: 'human', 
-      name: 'Private Martinez', 
-      type: 'Soldier',
-      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
-    });
-    cards.push({ 
-      id: 'h_soldier_2', 
-      faction: 'human', 
-      name: 'Sergeant Liu', 
-      type: 'Soldier',
-      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
-    });
-    cards.push({ 
-      id: 'h_soldier_3', 
-      faction: 'human', 
-      name: 'Private Jackson', 
-      type: 'Soldier',
-      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
-    });
-    cards.push({ 
-      id: 'h_soldier_4', 
-      faction: 'human', 
-      name: 'Corporal Kim', 
-      type: 'Soldier',
-      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1, ability: 'If adjacent to one or more aliens, gain 2 strength and 1 attack.' } 
+      name: 'General Johnson', 
+      type: 'Commander',
+      stats: { 
+        health: 3, 
+        damage: 2, 
+        range: 2, 
+        attacks: 2, 
+        initiative: 3, 
+        points: 1,
+        rareness: 3,
+        ability: 'All adjacent humans has +1 attack' 
+      } 
     });
     
-    // 4 Medics
-    cards.push({ 
-      id: 'h_medic_0', 
-      faction: 'human', 
-      name: 'Dr. Chen', 
-      type: 'Medic',
-      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
-    });
-    cards.push({ 
-      id: 'h_medic_1', 
-      faction: 'human', 
-      name: 'Medic Sarah', 
-      type: 'Medic',
-      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
-    });
-    cards.push({ 
-      id: 'h_medic_2', 
-      faction: 'human', 
-      name: 'Dr. Patel', 
-      type: 'Medic',
-      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
-    });
-    cards.push({ 
-      id: 'h_medic_3', 
-      faction: 'human', 
-      name: 'Nurse Williams', 
-      type: 'Medic',
-      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
-    });
-    
-    // 3 Tanks
-    cards.push({ 
-      id: 'h_tank_0', 
-      faction: 'human', 
-      name: 'Tank Unit Alpha', 
-      type: 'Tank',
-      stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } 
-    });
-    cards.push({ 
-      id: 'h_tank_1', 
-      faction: 'human', 
-      name: 'Heavy Armor Beta', 
-      type: 'Tank',
-      stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } 
-    });
-    cards.push({ 
-      id: 'h_tank_2', 
-      faction: 'human', 
-      name: 'Tank Unit Gamma', 
-      type: 'Tank',
-      stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } 
-    });
-    
-    // 2 Snipers
     cards.push({ 
       id: 'h_sniper_0', 
       faction: 'human', 
-      name: 'Eagle Eye Morgan', 
+      name: 'Hannah Honor', 
       type: 'Sniper',
-      stats: { health: 2, attacks: 1, range: 3, initiative: 4, points: 2 } 
-    });
-    cards.push({ 
-      id: 'h_sniper_1', 
-      faction: 'human', 
-      name: 'Sharpshooter Elena', 
-      type: 'Sniper',
-      stats: { health: 2, attacks: 1, range: 3, initiative: 4, points: 2 } 
+      stats: { 
+        health: 1, 
+        damage: 1, 
+        range: 4, 
+        attacks: 2, 
+        initiative: 2, 
+        points: 2,
+        rareness: 4,
+        ability: 'If only adjacent to one more character, gain +1 damage' 
+      } 
     });
     
-    // 1 Scout
     cards.push({ 
-      id: 'h_scout_0', 
+      id: 'h_medic_0', 
       faction: 'human', 
-      name: 'Scout Rodriguez', 
-      type: 'Scout',
-      stats: { health: 1, attacks: 0, range: 0, initiative: 7, points: 1 } 
+      name: 'Nurse Tender', 
+      type: 'Medic',
+      stats: { 
+        health: 5, 
+        damage: 1, 
+        range: 1, 
+        attacks: 1, 
+        initiative: 4, 
+        points: 0,
+        rareness: 1,
+        ability: 'Adjacent humans has a 30% chance to ressurect when killed. (Applies one time per adjacent human)' 
+      } 
+    });
+    
+    cards.push({ 
+      id: 'h_soldier_0', 
+      faction: 'human', 
+      name: 'Heavy Gunner Jack', 
+      type: 'Soldier',
+      stats: { 
+        health: 1, 
+        damage: 4, 
+        range: 1, 
+        attacks: 1, 
+        initiative: 1, 
+        points: 2,
+        rareness: 2
+      } 
     });
     
     return cards;
@@ -156,119 +107,74 @@ export class Game {
   private createAlienDeck(): CharacterCard[] {
     const cards: CharacterCard[] = [];
     
-    // 5 Drones
+    // New character design from GOALS.md
+    
     cards.push({ 
-      id: 'a_drone_0', 
+      id: 'a_soldier_0', 
       faction: 'alien', 
-      name: 'Drone Alpha-7', 
-      type: 'Drone',
-      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_drone_1', 
-      faction: 'alien', 
-      name: 'Drone Beta-3', 
-      type: 'Drone',
-      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_drone_2', 
-      faction: 'alien', 
-      name: 'Drone Gamma-9', 
-      type: 'Drone',
-      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_drone_3', 
-      faction: 'alien', 
-      name: 'Drone Delta-5', 
-      type: 'Drone',
-      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_drone_4', 
-      faction: 'alien', 
-      name: 'Drone Epsilon-1', 
-      type: 'Drone',
-      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
+      name: 'Pilot Frnuhuh', 
+      type: 'Soldier',
+      stats: { 
+        health: 2, 
+        damage: 3, 
+        range: 1, 
+        attacks: 2, 
+        initiative: 2, 
+        points: 1,
+        rareness: 1,
+        ability: 'If Frnuhuh has no adjacent aliens, he gains double the number of attacks' 
+      } 
     });
     
-    // 4 Parasites
     cards.push({ 
-      id: 'a_parasite_0', 
+      id: 'a_commander_0', 
       faction: 'alien', 
-      name: 'Creeper', 
-      type: 'Parasite',
-      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_parasite_1', 
-      faction: 'alien', 
-      name: 'Crawler', 
-      type: 'Parasite',
-      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_parasite_2', 
-      faction: 'alien', 
-      name: 'Leech', 
-      type: 'Parasite',
-      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_parasite_3', 
-      faction: 'alien', 
-      name: 'Infestor', 
-      type: 'Parasite',
-      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
+      name: 'Elder K\'tharr', 
+      type: 'Commander',
+      stats: { 
+        health: 3, 
+        damage: 2, 
+        range: 1, 
+        attacks: 1, 
+        initiative: 1, 
+        points: 2,
+        rareness: 4,
+        ability: 'All adjacent enemies lose 1 range due to psychic interference.' 
+      } 
     });
     
-    // 3 Beasts
     cards.push({ 
-      id: 'a_beast_0', 
+      id: 'a_medic_0', 
       faction: 'alien', 
-      name: 'Ravager', 
-      type: 'Beast',
-      stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } 
-    });
-    cards.push({ 
-      id: 'a_beast_1', 
-      faction: 'alien', 
-      name: 'Devourer', 
-      type: 'Beast',
-      stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } 
-    });
-    cards.push({ 
-      id: 'a_beast_2', 
-      faction: 'alien', 
-      name: 'Stalker', 
-      type: 'Beast',
-      stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } 
+      name: 'Mutant Vor', 
+      type: 'Medic',
+      stats: { 
+        health: 2, 
+        damage: 3, 
+        range: 1, 
+        attacks: 1, 
+        initiative: 4, 
+        points: 2,
+        rareness: 3,
+        ability: 'Heals the first attack he receives' 
+      } 
     });
     
-    // 2 Mutants
     cards.push({ 
-      id: 'a_mutant_0', 
+      id: 'a_sniper_0', 
       faction: 'alien', 
-      name: 'Abomination', 
-      type: 'Mutant',
-      stats: { health: 3, attacks: 2, range: 1, initiative: 3, points: 1 } 
-    });
-    cards.push({ 
-      id: 'a_mutant_1', 
-      faction: 'alien', 
-      name: 'Monstrosity', 
-      type: 'Mutant',
-      stats: { health: 3, attacks: 2, range: 1, initiative: 3, points: 1 } 
-    });
-    
-    // 1 Overlord
-    cards.push({ 
-      id: 'a_overlord_0', 
-      faction: 'alien', 
-      name: 'Xar\'thul the Eternal', 
-      type: 'Overlord',
-      stats: { health: 4, attacks: 2, range: 1, initiative: 1, points: 2 } 
+      name: 'Warlord Vekkor', 
+      type: 'Sniper',
+      stats: { 
+        health: 2, 
+        damage: 3, 
+        range: 5, 
+        attacks: 1, 
+        initiative: 3, 
+        points: 0,
+        rareness: 2,
+        ability: 'Increases the range of adjacent friendly aliens by +1.' 
+      } 
     });
     
     return cards;
@@ -301,6 +207,9 @@ export class Game {
     if (hex && !hex.isMountain && this.canPlaceAt(hex)) {
       this.state.placedCharacters.push({ hex, card: this.state.selectedCard });
       this.state.selectedCard = undefined;
+      // Clear drawn cards after placement
+      this.state.drawnCards = [];
+      this.state.drawnCardsBackup = undefined;
       // Draw event card
       this.drawEvent();
       // Check if placement done
@@ -498,5 +407,89 @@ export class Game {
       cards.push({ id: `berserk_${i}`, name: 'Berserk', effect: 'Increase attack but reduce defense' });
     }
     return this.shuffle(cards); // Shuffle event deck too
+  }
+
+  allCardsPlaced(): boolean {
+    // Check if both decks are empty, no drawn cards, and no drawn event
+    const result = this.state.humanDeck.length === 0 && 
+           this.state.alienDeck.length === 0 && 
+           this.state.drawnCards.length === 0 &&
+           !this.state.drawnEvent;
+    
+    console.log('allCardsPlaced check:', {
+      humanDeck: this.state.humanDeck.length,
+      alienDeck: this.state.alienDeck.length,
+      drawnCards: this.state.drawnCards.length,
+      drawnEvent: !!this.state.drawnEvent,
+      result
+    });
+    
+    return result;
+  }
+
+  autoPlaceAll() {
+    // Automatically place all cards and resolve all events
+    while (this.state.humanDeck.length > 0 || this.state.alienDeck.length > 0) {
+      // Draw cards for current player
+      this.drawCards();
+      
+      // Pick first card
+      if (this.state.drawnCards.length > 0) {
+        this.state.selectedCard = this.state.drawnCards[0];
+        
+        // Find a valid hex to place on
+        const availableHexes = this.state.board.filter(h => 
+          !h.isMountain && 
+          this.canPlaceAt(h) &&
+          !this.state.placedCharacters.some(pc => pc.hex.q === h.q && pc.hex.r === h.r)
+        );
+        
+        if (availableHexes.length > 0) {
+          const hex = availableHexes[0];
+          this.placeCharacter(hex.q, hex.r);
+          
+          // Auto-resolve any event that was drawn
+          if (this.state.drawnEvent) {
+            this.state.drawnEvent = undefined;
+            this.advanceTurn();
+          }
+        }
+      }
+    }
+    
+    this.onUpdate();
+  }
+
+  startBattle() {
+    // Calculate scores
+    let humanScore = 0;
+    let alienScore = 0;
+
+    for (const placed of this.state.placedCharacters) {
+      const hexPoints = placed.hex.value || 0;
+      const cardPoints = placed.card.stats.points;
+      const totalPoints = hexPoints + cardPoints;
+
+      if (placed.card.faction === 'human') {
+        humanScore += totalPoints;
+      } else {
+        alienScore += totalPoints;
+      }
+    }
+
+    this.state.humanScore = humanScore;
+    this.state.alienScore = alienScore;
+
+    // Determine winner
+    if (humanScore > alienScore) {
+      this.state.winner = 'human';
+    } else if (alienScore > humanScore) {
+      this.state.winner = 'alien';
+    } else {
+      this.state.winner = 'tie';
+    }
+
+    this.state.phase = 'scoring';
+    this.onUpdate();
   }
 }
