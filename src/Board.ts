@@ -32,7 +32,7 @@ export class Board {
     
     // Load background image
     this.backgroundImage = new Image();
-    this.backgroundImage.src = '/background-hex.png';
+    this.backgroundImage.src = '/background-hex-4.png';
     
     this.generateHexes();
     this.gameState.board = this.hexes; // Set board in state
@@ -102,6 +102,12 @@ export class Board {
     // Don't clear here - main.ts clears the whole canvas
     const boardWidth = this.canvas.width * 0.6;
     
+    // Save context and clip to board area only (left 60%)
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, boardWidth, this.canvas.height);
+    this.ctx.clip();
+    
     // Draw background image on left 60%
     if (this.backgroundImage.complete) {
       this.ctx.drawImage(this.backgroundImage, 0, 0, boardWidth, this.canvas.height);
@@ -122,30 +128,30 @@ export class Board {
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(dividerX - gradientWidth, 0, gradientWidth * 2, this.canvas.height);
     
-    // Draw hex info box at top right of board area
-    const infoBoxWidth = 470; // Increased by another 70
-    const infoBoxHeight = 180; // Increased by another 20
-    const infoBoxX = boardWidth - infoBoxWidth - 10; // 10px margin from right edge
-    const infoBoxY = 10;
-    const cornerRadius = 8;
-    
-    // Draw rounded rectangle background
-    this.ctx.fillStyle = 'gray';
-    this.ctx.beginPath();
-    this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
-    this.ctx.fill();
-    
-    // Draw thin off-white border with slight purple tint
-    this.ctx.strokeStyle = '#f5f2f8'; // Off-white with purple tint
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
-    this.ctx.stroke();
-    
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '16px sans-serif';
-    
+    // Draw hex info box at top right of board area (only when hovering over a hex)
     if (this.gameState.hoverHex) {
+      const infoBoxWidth = 470;
+      const infoBoxHeight = 180;
+      const infoBoxX = boardWidth - infoBoxWidth - 10;
+      const infoBoxY = 10;
+      const cornerRadius = 8;
+      
+      // Draw rounded rectangle background
+      this.ctx.fillStyle = 'gray';
+      this.ctx.beginPath();
+      this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
+      this.ctx.fill();
+      
+      // Draw thin off-white border with slight purple tint
+      this.ctx.strokeStyle = '#f5f2f8';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
+      this.ctx.stroke();
+      
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = '16px sans-serif';
+      
       // Find the hex being hovered
       const hoveredHex = this.gameState.board.find(h => h.q === this.gameState.hoverHex!.q && h.r === this.gameState.hoverHex!.r);
       if (hoveredHex) {
@@ -213,9 +219,6 @@ export class Board {
           }
         }
       }
-    } else {
-      this.ctx.fillText('Hover over a hex', infoBoxX + 10, infoBoxY + 35);
-      this.ctx.fillText('for info', infoBoxX + 10, infoBoxY + 60);
     }
     
     // Render hexes
@@ -337,6 +340,9 @@ export class Board {
         this.cardRenderer.renderCard(this.ctx, hoveredPlaced.card, previewX, previewY, previewWidth, previewHeight);
       }
     }
+    
+    // Restore context - removes clipping
+    this.ctx.restore();
 
     // Draw cursor dot if holding a card - moved to GameUI
   }

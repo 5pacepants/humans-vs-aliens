@@ -1,6 +1,6 @@
-// Render character cards
+// Render character cards and event cards
 
-import type { CharacterCard } from './types';
+import type { CharacterCard, EventCard } from './types';
 import { CardAssetLoader } from './CardAssetLoader';
 
 export class CardRenderer {
@@ -20,15 +20,24 @@ export class CardRenderer {
     this.offscreenCtx.imageSmoothingQuality = 'high';
   }
 
-  renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number) {
+  renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard | EventCard, x: number, y: number, width: number, height: number) {
     // Set up offscreen canvas with supersampling scale
     const scale = this.SUPERSAMPLING_SCALE;
     this.offscreenCanvas.width = width * scale;
     this.offscreenCanvas.height = height * scale;
-    this.offscreenCtx.scale(scale, scale);
+    
+    // Clear canvas and reset transformation
+    this.offscreenCtx.clearRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+    this.offscreenCtx.setTransform(scale, 0, 0, scale, 0, 0);
 
-    // Render to offscreen canvas with scaled coordinates
-    this.renderCardToContext(this.offscreenCtx, card, 0, 0, width, height);
+    // Check if it's an EventCard or CharacterCard
+    if ('effect' in card) {
+      // It's an EventCard
+      this.renderEventCardToContext(this.offscreenCtx, card, 0, 0, width, height);
+    } else {
+      // It's a CharacterCard
+      this.renderCardToContext(this.offscreenCtx, card, 0, 0, width, height);
+    }
 
     // Draw scaled-down result to main canvas
     ctx.drawImage(this.offscreenCanvas, x, y, width, height);
@@ -40,7 +49,7 @@ export class CardRenderer {
     this.offscreenCanvas.width = width * scale;
     this.offscreenCanvas.height = height * scale;
     this.offscreenCtx.clearRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
-    this.offscreenCtx.scale(scale, scale);
+    this.offscreenCtx.setTransform(scale, 0, 0, scale, 0, 0);
 
     const isHuman = card.faction === 'human';
     const contentWidth = width * 0.85; // Approximate content area
@@ -176,9 +185,118 @@ export class CardRenderer {
     this.drawCardText(ctx, card, contentX, textY, contentWidth, textHeight);
   }
 
+  private renderEventCardToContext(ctx: CanvasRenderingContext2D, card: EventCard, x: number, y: number, width: number, height: number) {
+    // Event card colors - red/orange theme
+    const borderColor = '#8B1A1A'; // Mörkröd border
+    const bgColor = '#F0D4A8'; // Ljusare matt orange bakgrund med låg saturation
+    const darkBgColor = '#E8A04D'; // Gul/orange för header
+    const borderWidth = 4;
+    const cardPadding = 14;
+    const imageAreaPadding = 8;
+    const cornerRadius = 12;
+
+    // Draw thin outline around entire card with rounded corners
+    ctx.strokeStyle = '#8B1A1A';
+    ctx.lineWidth = 10;
+    this.roundedRect(ctx, x + 5, y + 5, width - 10, height - 10, cornerRadius);
+    ctx.stroke();
+
+    // Draw outer border with rounded corners
+    ctx.fillStyle = borderColor;
+    this.roundedRect(ctx, x, y, width, height, cornerRadius);
+    ctx.fill();
+
+    // Draw background with rounded corners
+    ctx.fillStyle = bgColor;
+    this.roundedRect(ctx, x + borderWidth, y + borderWidth, width - borderWidth * 2, height - borderWidth * 2, cornerRadius - borderWidth);
+    ctx.fill();
+
+    // Draw darker background section for header at top
+    ctx.fillStyle = darkBgColor;
+    const headerBgHeight = 55;
+    ctx.save();
+    ctx.beginPath();
+    this.roundedRect(ctx, x + borderWidth, y + borderWidth, width - borderWidth * 2, headerBgHeight, cornerRadius - borderWidth);
+    ctx.clip();
+    ctx.fillRect(x + borderWidth, y + borderWidth, width - borderWidth * 2, headerBgHeight);
+    ctx.restore();
+
+    // Draw card name in the dark top section
+    ctx.fillStyle = '#000000';
+    ctx.font = '700 32px "Smooch Sans", sans-serif';
+    const nameWidth = ctx.measureText(card.name).width;
+    const nameX = x + (width - nameWidth) / 2;
+    const nameY = y + borderWidth + headerBgHeight - 10;
+    ctx.fillText(card.name, nameX, nameY);
+
+    // Content area
+    const contentX = x + borderWidth + cardPadding;
+    const contentY = y + borderWidth + cardPadding;
+    const contentWidth = width - borderWidth * 2 - cardPadding * 2;
+    const contentHeight = height - borderWidth * 2 - cardPadding * 2;
+
+    // Draw event image area (about 60% height, same as character cards)
+    const imageHeight = contentHeight * 0.6;
+    const baseImageW = contentWidth - imageAreaPadding * 2;
+    const baseImageH = imageHeight - 14;
+    const imageW = baseImageW * 1.15;
+    const imageH = baseImageH * 1.15;
+    const imageX = contentX + imageAreaPadding - (imageW - baseImageW) / 2;
+    const imageY = contentY - (height * 0.02) + 15; // Flyttad ner 15px
+
+    // Frame dimensions - 35px ner från toppen, 40px upp från botten
+    const frameY = imageY + 35;
+    const frameH = imageH - 75;
+
+    // Clip to frame area so image cannot overflow
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(imageX, imageY, imageW, imageH - (height * 0.164));
+    ctx.clip();
+    this.drawEventImage(ctx, imageX, imageY, imageW, imageH);
+    ctx.restore();
+
+    // Draw frame around image (should be on top with transparent center)
+    this.drawEventFrame(ctx, imageX, frameY, imageW, frameH);
+
+    // Draw text info at bottom
+    const textY = imageY + imageHeight - 42;
+    const textHeight = contentHeight - imageHeight - 16;
+    this.drawEventText(ctx, card, contentX, textY, contentWidth, textHeight);
+  }
+
   private drawCharacterImage(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, faction: 'human' | 'alien') {
     const assetKey = faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder';
     const img = this.assetLoader.getAsset(assetKey);
+    if (img && img.complete) {
+      // Preserve original aspect ratio
+      const imgAspect = img.width / img.height;
+      const frameAspect = width / height;
+      
+      let charW, charH;
+      if (imgAspect > frameAspect) {
+        // Image is wider - fit to width at 80% scale
+        charW = width * 0.8;
+        charH = charW / imgAspect;
+      } else {
+        // Image is taller - fit to height at 80% scale
+        charH = height * 0.8;
+        charW = charH * imgAspect;
+      }
+      
+      const charX = x + (width - charW) / 2;
+      const charY = y + (height - charH) / 2;
+      ctx.drawImage(img, charX, charY, charW, charH);
+    } else {
+      // Fallback placeholder color
+      ctx.fillStyle = '#cccccc';
+      ctx.fillRect(x, y, width, height);
+    }
+  }
+
+  private drawEventImage(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+    const img = this.assetLoader.getAsset('characterEventPlaceholder');
+    
     if (img && img.complete) {
       // Preserve original aspect ratio
       const imgAspect = img.width / img.height;
@@ -214,6 +332,18 @@ export class CardRenderer {
     } else {
       // Fallback: simple border
       ctx.strokeStyle = '#b8860b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, width, height);
+    }
+  }
+
+  private drawEventFrame(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+    const frame = this.assetLoader.getAsset('frameEvent');
+    if (frame && frame.complete) {
+      ctx.drawImage(frame, x, y, width, height);
+    } else {
+      // Fallback: simple border
+      ctx.strokeStyle = '#9b59b6';
       ctx.lineWidth = 3;
       ctx.strokeRect(x, y, width, height);
     }
@@ -314,6 +444,39 @@ export class CardRenderer {
     statsLines.forEach(line => {
       ctx.fillText(line, x + 4, statsY);
       statsY += 14;
+    });
+  }
+
+  private drawEventText(ctx: CanvasRenderingContext2D, card: EventCard, x: number, y: number, width: number, height: number) {
+    const textColor = '#000000';
+    const effectColor = '#333333';
+
+    // "Event" text - CENTERED
+    ctx.fillStyle = textColor;
+    ctx.font = '500 15px Quicksand, sans-serif';
+    const eventText = 'Event';
+    const eventWidth = ctx.measureText(eventText).width;
+    const eventX = x + (width - eventWidth) / 2;
+    ctx.fillText(eventText, eventX, y + 33);
+
+    // Divider line between Event and effect
+    ctx.strokeStyle = '#999999';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 43);
+    ctx.lineTo(x + width - 10, y + 43);
+    ctx.stroke();
+
+    // Card effect description
+    ctx.font = '22px Quicksand, sans-serif';
+    ctx.fillStyle = effectColor;
+    const wrappedText = this.wrapText(card.effect, width - 10, ctx);
+    let textY = y + 71;
+    wrappedText.forEach(line => {
+      if (textY < y + height) {
+        ctx.fillText(line, x + 4, textY);
+        textY += 24;
+      }
     });
   }
 

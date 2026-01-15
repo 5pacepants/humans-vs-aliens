@@ -8,6 +8,9 @@ export class GameUI {
   private ctx: CanvasRenderingContext2D;
   private cardRenderer: CardRenderer;
   private backgroundImage: HTMLImageElement;
+  private cardbackHuman: HTMLImageElement;
+  private cardbackAlien: HTMLImageElement;
+  private cardbackEvent: HTMLImageElement;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -16,7 +19,17 @@ export class GameUI {
     
     // Load background image for UI area
     this.backgroundImage = new Image();
-    this.backgroundImage.src = '/background-hex-3.png';
+    this.backgroundImage.src = '/background-cards-2.png';
+    
+    // Load cardback images
+    this.cardbackHuman = new Image();
+    this.cardbackHuman.src = '/cardback-human.png';
+    
+    this.cardbackAlien = new Image();
+    this.cardbackAlien.src = '/cardback-alien.png';
+    
+    this.cardbackEvent = new Image();
+    this.cardbackEvent.src = '/cardback-event.png';
   }
 
   render(gameState: GameState) {
@@ -26,6 +39,14 @@ export class GameUI {
 
     // Draw background image for UI (right 40%)
     if (this.backgroundImage.complete) {
+      // Save context state
+      this.ctx.save();
+      
+      // Clip to UI area to prevent shadows bleeding into hex side
+      this.ctx.beginPath();
+      this.ctx.rect(uiX, 0, uiWidth, this.canvas.height);
+      this.ctx.clip();
+      
       this.ctx.drawImage(this.backgroundImage, uiX, 0, uiWidth, this.canvas.height);
       
       // Apply soft gradient fade on left edge
@@ -37,6 +58,9 @@ export class GameUI {
       
       this.ctx.fillStyle = fadeGradient;
       this.ctx.fillRect(uiX, 0, gradientWidth, this.canvas.height);
+      
+      // Restore context - removes clipping so shadows can render properly
+      this.ctx.restore();
     } else {
       // Fallback to gray background if image not loaded
       this.ctx.fillStyle = '#4a4a4a';
@@ -63,61 +87,273 @@ export class GameUI {
       }
     }
 
-    // Right sidebar - deck piles and drawn cards
+    // Draw cardbacks at top of UI in 3-column layout (these ARE the decks)
+    const cardbackWidth = 304; // Same as drawn cards
+    const cardbackHeight = 487; // Same as drawn cards
+    const cardbackSpacing = 10;
+    const cardbackStartY = 50;
+    const totalCardbackWidth = cardbackWidth * 3 + cardbackSpacing * 2;
+    const cardbackStartX = uiX + (uiWidth - totalCardbackWidth) / 2;
+    
+    // Determine which cardback should be enlarged (active deck)
+    let activeCardback: 'human' | 'alien' | 'event' | null = null;
+    if (gameState.drawnEvent) {
+      activeCardback = 'event'; // Event card drawn
+    } else if (gameState.currentPlayer === 'human') {
+      activeCardback = 'human';
+    } else if (gameState.currentPlayer === 'alien') {
+      activeCardback = 'alien';
+    }
+    
+    const enlargeScale = 1.15; // 15% larger for active deck
+    
+    // Human cardback
+    if (this.cardbackHuman.complete) {
+      const isActive = activeCardback === 'human';
+      const scale = isActive ? enlargeScale : 1.0;
+      const w = cardbackWidth * scale;
+      const h = cardbackHeight * scale;
+      const x = cardbackStartX - (w - cardbackWidth) / 2;
+      const y = cardbackStartY - (h - cardbackHeight) / 2;
+      
+      // Shadow effect - red for active, white for inactive
+      if (isActive) {
+        this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+        this.ctx.shadowBlur = 30;
+      } else {
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.shadowBlur = 20;
+      }
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+      this.ctx.drawImage(this.cardbackHuman, x, y, w, h);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      
+      // Show card count on top of cardback
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = '700 24px "Smooch Sans", sans-serif';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowOffsetX = 2;
+      this.ctx.shadowOffsetY = 2;
+      const humanText = `${gameState.humanDeck.length} cards`;
+      const humanTextWidth = this.ctx.measureText(humanText).width;
+      this.ctx.fillText(humanText, x + (w - humanTextWidth) / 2, y + h - 15);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+    }
+    
+    // Alien cardback
+    if (this.cardbackAlien.complete) {
+      const isActive = activeCardback === 'alien';
+      const scale = isActive ? enlargeScale : 1.0;
+      const w = cardbackWidth * scale;
+      const h = cardbackHeight * scale;
+      const baseX = cardbackStartX + cardbackWidth + cardbackSpacing;
+      const x = baseX - (w - cardbackWidth) / 2;
+      const y = cardbackStartY - (h - cardbackHeight) / 2;
+      
+      // Shadow effect - red for active, white for inactive
+      if (isActive) {
+        this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+        this.ctx.shadowBlur = 30;
+      } else {
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.shadowBlur = 20;
+      }
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+      this.ctx.drawImage(this.cardbackAlien, x, y, w, h);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      
+      // Show card count on top of cardback
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = '700 24px "Smooch Sans", sans-serif';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowOffsetX = 2;
+      this.ctx.shadowOffsetY = 2;
+      const alienText = `${gameState.alienDeck.length} cards`;
+      const alienTextWidth = this.ctx.measureText(alienText).width;
+      this.ctx.fillText(alienText, x + (w - alienTextWidth) / 2, y + h - 15);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+    }
+    
+    // Event cardback
+    if (this.cardbackEvent.complete) {
+      const isActive = activeCardback === 'event';
+      const scale = isActive ? enlargeScale : 1.0;
+      const w = cardbackWidth * scale;
+      const h = cardbackHeight * scale;
+      const baseX = cardbackStartX + (cardbackWidth + cardbackSpacing) * 2;
+      const x = baseX - (w - cardbackWidth) / 2;
+      const y = cardbackStartY - (h - cardbackHeight) / 2;
+      
+      // Shadow effect - red for active, white for inactive
+      if (isActive) {
+        this.ctx.shadowColor = 'rgba(255, 50, 50, 1.0)';
+        this.ctx.shadowBlur = 30;
+      } else {
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.shadowBlur = 20;
+      }
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+      this.ctx.drawImage(this.cardbackEvent, x, y, w, h);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      
+      // Show card count on top of cardback
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = '700 24px "Smooch Sans", sans-serif';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowOffsetX = 2;
+      this.ctx.shadowOffsetY = 2;
+      const eventText = `${gameState.eventDeck.length} cards`;
+      const eventTextWidth = this.ctx.measureText(eventText).width;
+      this.ctx.fillText(eventText, x + (w - eventTextWidth) / 2, y + h - 15);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+    }
+
     const deckX = uiX + 10;
     const deckWidth = uiWidth - 20;
-    const deckHeight = 70;
-    const pileSpacing = 10;
+    const deckStartY = cardbackStartY + cardbackHeight + 20;
 
-    // Human deck pile
-    let color = gameState.hoverPile === 'human' ? 'darkgray' : 'gray';
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(deckX, 50, deckWidth, deckHeight);
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '700 18px "Smooch Sans", sans-serif';
-    this.ctx.fillText('Human Deck', deckX + 10, 75);
-    this.ctx.font = '16px Quicksand, sans-serif';
-    this.ctx.fillText(`${gameState.humanDeck.length} cards`, deckX + 10, 95);
-
-    // Alien deck pile
-    color = gameState.hoverPile === 'alien' ? 'darkgray' : 'gray';
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(deckX, 130, deckWidth, deckHeight);
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '700 18px "Smooch Sans", sans-serif';
-    this.ctx.fillText('Alien Deck', deckX + 10, 155);
-    this.ctx.font = '16px Quicksand, sans-serif';
-    this.ctx.fillText(`${gameState.alienDeck.length} cards`, deckX + 10, 175);
-
-    // Event deck pile
-    color = gameState.hoverPile === 'event' ? 'darkgray' : 'gray';
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(deckX, 210, deckWidth, deckHeight);
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '700 18px "Smooch Sans", sans-serif';
-    this.ctx.fillText('Event Deck', deckX + 10, 235);
-    this.ctx.font = '16px Quicksand, sans-serif';
-    this.ctx.fillText(`${gameState.eventDeck.length} cards`, deckX + 10, 255);
-
-    // Drawn event card
+    // Drawn event card - render it properly like other cards
     if (gameState.drawnEvent) {
-      const eventColor = gameState.hoverDrawnEvent ? '#5b2d82' : 'purple';
-      this.ctx.fillStyle = eventColor;
-      this.ctx.fillRect(deckX, 290, deckWidth, 50);
-      this.ctx.fillStyle = 'white';
-      this.ctx.fillText(gameState.drawnEvent.name, deckX + 10, 320);
+      const eventCardWidth = 274; // Same as drawn cards
+      const eventCardHeight = 438;
+      const eventCardX = deckX + (deckWidth - eventCardWidth) / 2; // Center it
+      const eventCardY = deckStartY;
 
-      // Skip button
-      const skipColor = gameState.hoverSkip ? 'darkgray' : 'gray';
-      this.ctx.fillStyle = skipColor;
-      const skipWidth = 70;
-      this.ctx.fillRect(deckX, 350, skipWidth, 30);
-      this.ctx.fillStyle = 'white';
-      this.ctx.font = '14px sans-serif';
-      const cardStartY = 380;
-      const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
-      this.ctx.fillText('Skip', deckX + 10, 368);
-      this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, 368);
+      // Apply shadow
+      const isHovered = gameState.hoverDrawnEvent;
+      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+      this.ctx.shadowBlur = 25;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+      
+      // Animate scale from 1.0 to 1.2 over 300ms when hovering
+      const targetScale = isHovered ? 1.2 : 1.0;
+      const animationDuration = 300; // milliseconds
+      
+      // Initialize or update scale animation
+      if (gameState.hoverEventStartTime === undefined && isHovered) {
+        gameState.hoverEventStartTime = Date.now();
+        gameState.hoverEventScale = 1.0;
+      } else if (!isHovered) {
+        gameState.hoverEventStartTime = undefined;
+        gameState.hoverEventScale = 1.0;
+      }
+      
+      if (gameState.hoverEventStartTime !== undefined) {
+        const elapsed = Date.now() - gameState.hoverEventStartTime;
+        const progress = Math.min(elapsed / animationDuration, 1.0);
+        // Ease-out cubic for smoother animation
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        gameState.hoverEventScale = 1.0 + (targetScale - 1.0) * easedProgress;
+        
+        // Request another frame if animation not complete
+        if (progress < 1.0) {
+          requestAnimationFrame(() => this.render(gameState));
+        }
+      }
+      
+      const currentScale = gameState.hoverEventScale ?? 1.0;
+      const scaledWidth = eventCardWidth * currentScale;
+      const scaledHeight = eventCardHeight * currentScale;
+      const scaledX = eventCardX - (scaledWidth - eventCardWidth) / 2;
+      const scaledY = eventCardY - (scaledHeight - eventCardHeight) / 2;
+      
+      this.cardRenderer.renderCard(this.ctx, gameState.drawnEvent, scaledX, scaledY, scaledWidth, scaledHeight);
+      
+      // Reset shadow
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+
+      // Skip button below the event card
+      const skipY = eventCardY + eventCardHeight + 20; // Flyttad upp 10px (var +30)
+      const skipButton = this.cardRenderer['assetLoader'].getAsset('skipButton');
+      
+      if (skipButton && skipButton.complete) {
+        // Use skip button image with original aspect ratio, 50% larger
+        const originalAspect = skipButton.width / skipButton.height;
+        const skipHeight = 180; // 50% större än 120
+        const skipWidth = skipHeight * originalAspect;
+        const skipX = deckX + (deckWidth - skipWidth) / 2; // Center it
+        
+        // Optional hover effect
+        const hoverScale = gameState.hoverSkip ? 1.05 : 1.0;
+        const scaledSkipWidth = skipWidth * hoverScale;
+        const scaledSkipHeight = skipHeight * hoverScale;
+        const scaledSkipX = skipX - (scaledSkipWidth - skipWidth) / 2;
+        const scaledSkipY = skipY - (scaledSkipHeight - skipHeight) / 2;
+        
+        // Apply black shadow - much darker and more visible
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+        this.ctx.shadowBlur = 40;
+        this.ctx.shadowOffsetX = 8;
+        this.ctx.shadowOffsetY = 8;
+        
+        this.ctx.drawImage(skipButton, scaledSkipX, scaledSkipY, scaledSkipWidth, scaledSkipHeight);
+        
+        // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        
+        // Draw skip count on the button with black shadow like hex numbers
+        // Apply hover scale to text size too
+        const baseFontSize = 20;
+        const scaledFontSize = baseFontSize * hoverScale;
+        this.ctx.font = `bold ${scaledFontSize}px sans-serif`;
+        
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+        this.ctx.shadowBlur = 20;
+        this.ctx.shadowOffsetX = 4;
+        this.ctx.shadowOffsetY = 4;
+        
+        // Black stroke outline
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 6;
+        const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
+        const skipText = `Skip: (${skips})`;
+        const skipTextWidth = this.ctx.measureText(skipText).width;
+        const textX = skipX + (skipWidth - skipTextWidth) / 2;
+        const textY = skipY + 89; // Flyttad ner 2px (var 87)
+        this.ctx.strokeText(skipText, textX, textY);
+        
+        // Then fill with white
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillText(skipText, textX, textY);
+        
+        // Reset shadow and stroke
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+      } else {
+        // Fallback to gray rectangle
+        const skipColor = gameState.hoverSkip ? 'darkgray' : 'gray';
+        this.ctx.fillStyle = skipColor;
+        const skipWidth = 70;
+        this.ctx.fillRect(deckX, skipY, skipWidth, 30);
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '14px sans-serif';
+        const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
+        this.ctx.fillText('Skip', deckX + 10, skipY + 18);
+        this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, skipY + 18);
+      }
     }
 
     // Card preview moved to Board.ts for better positioning
@@ -125,11 +361,12 @@ export class GameUI {
     // Render drawn cards in 3-column grid
     if (gameState.drawnCards.length > 0) {
       const cardsPerRow = 3;
-      const cardStartX = deckX;
-      const cardStartY = 320;
       const cardSpacing = 21;
-      const cardWidth = 304;
-      const cardHeight = 487;
+      const cardWidth = 274; // 90% of 304
+      const cardHeight = 438; // 90% of 487
+      const totalCardsWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * cardSpacing;
+      const cardStartX = uiX + (uiWidth - totalCardsWidth) / 2; // Center the cards
+      const cardStartY = deckStartY + 170;
 
       // First pass: render all non-hovered cards
       for (let i = 0; i < gameState.drawnCards.length; i++) {
@@ -141,8 +378,18 @@ export class GameUI {
         const cardX = cardStartX + col * (cardWidth + cardSpacing);
         const cardY = cardStartY + row * (cardHeight + cardSpacing);
 
+        // Apply white shadow
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.shadowBlur = 25;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+        
         // Use CardRenderer for visual cards
         this.cardRenderer.renderCard(this.ctx, card, cardX, cardY, cardWidth, cardHeight);
+        
+        // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
       }
 
       // Second pass: render hovered card last (on top) and with animated scale
@@ -179,6 +426,7 @@ export class GameUI {
         const hoverX = baseCardX - (hoverWidth - cardWidth) / 2;
         const hoverY = baseCardY - (hoverHeight - cardHeight) / 2;
 
+        // No shadow for hovered card - enlargement is enough highlight
         this.cardRenderer.renderCard(this.ctx, card, hoverX, hoverY, hoverWidth, hoverHeight);
       }
     }
