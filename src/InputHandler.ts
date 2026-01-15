@@ -20,6 +20,7 @@ export class InputHandler {
     this.game.state.mouseY = y;
 
     // Reset hover
+    const previousHoverIndex = this.game.state.hoverCardIndex;
     this.game.state.hoverPile = undefined;
     this.game.state.hoverCardIndex = undefined;
     this.game.state.hoverHex = undefined;
@@ -58,6 +59,11 @@ export class InputHandler {
 
           if (x >= cardX && x < cardX + cardWidth && y >= cardY && y < cardY + cardHeight) {
             this.game.state.hoverCardIndex = i;
+            // Start animation if hovering a new card
+            if (previousHoverIndex !== i) {
+              this.game.state.hoverStartTime = Date.now();
+              this.game.state.hoverCardScale = 1.0;
+            }
             break;
           }
         }

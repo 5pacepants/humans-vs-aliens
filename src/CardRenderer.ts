@@ -37,16 +37,16 @@ export class CardRenderer {
   private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number) {
     // Card colors and dimensions based on faction
     const isHuman = card.faction === 'human';
-    const borderColor = isHuman ? '#181610' : '#b39ddb'; // Purple border for alien
-    const bgColor = isHuman ? '#DED9CE' : '#141f18'; // Even darker green for alien
-    const darkBgColor = isHuman ? '#bab29f' : '#b8c8b0'; // Darker green-tinted for alien
+    const borderColor = isHuman ? '#2a3a4d' : '#5a4570'; // Blue border for human, dark purple for alien
+    const bgColor = isHuman ? '#DED9CE' : '#233628'; // Darker green background for alien
+    const darkBgColor = isHuman ? '#bab29f' : '#141f18'; // Darker green for stats/faction areas on alien
     const borderWidth = 4;
     const cardPadding = 14;
     const imageAreaPadding = 8;
     const cornerRadius = 12; // Rounded corners like Magic cards
 
     // Draw thin outline around entire card with rounded corners first
-    const outlineColor = isHuman ? '#2a3a4d' : '#b39ddb'; // Purple for alien
+    const outlineColor = isHuman ? '#2a3a4d' : '#5a4570'; // Dark purple for alien
     ctx.strokeStyle = outlineColor;
     ctx.lineWidth = 10;
     this.roundedRect(ctx, x + 5, y + 5, width - 10, height - 10, cornerRadius);
@@ -74,7 +74,7 @@ export class CardRenderer {
     ctx.restore();
 
     // Draw faction text in the dark top section
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = isHuman ? '#000000' : '#ffffff';
     ctx.font = '500 15px Quicksand, sans-serif';
     const factionText = card.faction.charAt(0).toUpperCase() + card.faction.slice(1); // Capitalize
     const factionWidth = ctx.measureText(factionText).width;
@@ -104,18 +104,18 @@ export class CardRenderer {
     // Make frame 15% larger
     const imageW = baseImageW * 1.15;
     const imageH = baseImageH * 1.15;
-    // Center the larger frame and move closer to icons
+    // Center the larger frame and move closer to icons - scale with card size
     const imageX = contentX + imageAreaPadding - (imageW - baseImageW) / 2;
-    const imageY = contentY - 10; // Moved up 10 pixels total
+    const imageY = contentY - (height * 0.02); // Scale with height (was -10px at 487px)
 
-    // Frame dimensions - compressed for aliens, normal for humans
-    const frameY = isHuman ? imageY : imageY + 35;
-    const frameH = isHuman ? imageH : imageH - 70;
+    // Frame dimensions - compressed for aliens, normal for humans - scale with size
+    const frameY = isHuman ? imageY : imageY + (height * 0.072); // Scale with height (was 35px at 487px)
+    const frameH = isHuman ? imageH : imageH - (height * 0.144); // Scale with height (was -70px at 487px)
 
-    // Clip to frame area so image cannot overflow
+    // Clip to frame area so image cannot overflow - scale crop with size
     ctx.save();
     ctx.beginPath();
-    ctx.rect(imageX, imageY, imageW, imageH - 80); // Crop 80px from bottom
+    ctx.rect(imageX, imageY, imageW, imageH - (height * 0.164)); // Scale with height (was -80px at 487px)
     ctx.clip();
     this.drawCharacterImage(ctx, imageX, imageY, imageW, imageH, card.faction);
     ctx.restore();
@@ -123,9 +123,9 @@ export class CardRenderer {
     // Draw frame around image
     this.drawFrame(ctx, imageX, frameY, imageW, frameH, card.faction);
 
-    // Draw icons at top (pips instead of numbers)
-    this.drawHealthIcons(ctx, contentX - 16, contentY - 19, card.stats.health, card.faction);
-    this.drawAttackIcons(ctx, contentX + contentWidth + 16, contentY - 19, card.stats.attacks, card.faction);
+    // Draw icons at top (pips instead of numbers) - scale positions with size
+    this.drawHealthIcons(ctx, contentX - (width * 0.053), contentY - (height * 0.039), card.stats.health, card.faction);
+    this.drawAttackIcons(ctx, contentX + contentWidth + (width * 0.053), contentY - (height * 0.039), card.stats.attacks, card.faction);
 
     // Draw text info at bottom
     const textY = imageY + imageHeight - 42; // Moved up 50 pixels from original position
@@ -261,7 +261,7 @@ export class CardRenderer {
 
     // Stats lines
     ctx.font = '16px Quicksand, sans-serif';
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = isHuman ? '#000000' : '#ffffff';
     const statsLines = [
       `Range: ${card.stats.range}`,
       `Attacks: ${card.stats.attacks}`,

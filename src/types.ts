@@ -59,6 +59,8 @@ export interface GameState {
   hoverHex?: { q: number; r: number }; // hovered hex
   hoverDrawnEvent?: boolean; // hovered event card
   hoverSkip?: boolean; // hovered skip button
+  hoverCardScale?: number; // current scale of hovered card (for animation)
+  hoverStartTime?: number; // timestamp when hover started
   mouseX: number;
   mouseY: number;
   combatOrder: { hex: Hex; card: CharacterCard }[]; // sorted by initiative

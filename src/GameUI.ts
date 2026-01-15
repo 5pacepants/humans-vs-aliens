@@ -104,7 +104,10 @@ export class GameUI {
       const cardWidth = 304;
       const cardHeight = 487;
 
+      // First pass: render all non-hovered cards
       for (let i = 0; i < gameState.drawnCards.length; i++) {
+        if (gameState.hoverCardIndex === i) continue; // Skip hovered card for now
+        
         const card = gameState.drawnCards[i];
         const row = Math.floor(i / cardsPerRow);
         const col = i % cardsPerRow;
@@ -113,6 +116,43 @@ export class GameUI {
 
         // Use CardRenderer for visual cards
         this.cardRenderer.renderCard(this.ctx, card, cardX, cardY, cardWidth, cardHeight);
+      }
+
+      // Second pass: render hovered card last (on top) and with animated scale
+      if (gameState.hoverCardIndex !== undefined) {
+        const i = gameState.hoverCardIndex;
+        const card = gameState.drawnCards[i];
+        const row = Math.floor(i / cardsPerRow);
+        const col = i % cardsPerRow;
+        const baseCardX = cardStartX + col * (cardWidth + cardSpacing);
+        const baseCardY = cardStartY + row * (cardHeight + cardSpacing);
+
+        // Animate scale from 1.0 to 1.2 over 300ms
+        const targetScale = 1.2;
+        const animationDuration = 300; // milliseconds
+        
+        if (gameState.hoverStartTime !== undefined) {
+          const elapsed = Date.now() - gameState.hoverStartTime;
+          const progress = Math.min(elapsed / animationDuration, 1.0);
+          // Ease-out cubic for smoother animation
+          const easedProgress = 1 - Math.pow(1 - progress, 3);
+          gameState.hoverCardScale = 1.0 + (targetScale - 1.0) * easedProgress;
+          
+          // Request another frame if animation not complete
+          if (progress < 1.0) {
+            requestAnimationFrame(() => this.render(gameState));
+          }
+        }
+
+        const currentScale = gameState.hoverCardScale ?? 1.0;
+        const hoverWidth = cardWidth * currentScale;
+        const hoverHeight = cardHeight * currentScale;
+        
+        // Center the enlarged card on the original position
+        const hoverX = baseCardX - (hoverWidth - cardWidth) / 2;
+        const hoverY = baseCardY - (hoverHeight - cardHeight) / 2;
+
+        this.cardRenderer.renderCard(this.ctx, card, hoverX, hoverY, hoverWidth, hoverHeight);
       }
     }
 
