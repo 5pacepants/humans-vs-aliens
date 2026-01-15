@@ -20,7 +20,7 @@ export class GameUI {
     const uiWidth = this.canvas.width - boardWidth;
 
     // Draw UI background (right 40%)
-    this.ctx.fillStyle = '#1a1a1a';
+    this.ctx.fillStyle = '#4a4a4a';
     this.ctx.fillRect(uiX, 0, uiWidth, this.canvas.height);
     
     // Render phase/status info at top left

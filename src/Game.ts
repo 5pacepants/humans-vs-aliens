@@ -31,47 +31,246 @@ export class Game {
 
   private createHumanDeck(): CharacterCard[] {
     const cards: CharacterCard[] = [];
-    // 5 Soldier
-    for (let i = 0; i < 5; i++) {
-      cards.push({ id: `h_soldier_${i}`, faction: 'human', name: 'Soldier', stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } });
-    }
-    // 4 Medic
-    for (let i = 0; i < 4; i++) {
-      cards.push({ id: `h_medic_${i}`, faction: 'human', name: 'Medic', stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent' } });
-    }
-    // 3 Tank
-    for (let i = 0; i < 3; i++) {
-      cards.push({ id: `h_tank_${i}`, faction: 'human', name: 'Tank', stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } });
-    }
-    // 2 Sniper
-    for (let i = 0; i < 2; i++) {
-      cards.push({ id: `h_sniper_${i}`, faction: 'human', name: 'Sniper', stats: { health: 2, attacks: 1, range: 3, initiative: 4, points: 2 } });
-    }
+    
+    // Example cards with specific names and types
+    // You can customize these names and create unique characters
+    
+    // 5 Soldiers
+    cards.push({ 
+      id: 'h_soldier_0', 
+      faction: 'human', 
+      name: 'Corporal Hayes', 
+      type: 'Soldier',
+      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
+    });
+    cards.push({ 
+      id: 'h_soldier_1', 
+      faction: 'human', 
+      name: 'Private Martinez', 
+      type: 'Soldier',
+      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
+    });
+    cards.push({ 
+      id: 'h_soldier_2', 
+      faction: 'human', 
+      name: 'Sergeant Liu', 
+      type: 'Soldier',
+      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
+    });
+    cards.push({ 
+      id: 'h_soldier_3', 
+      faction: 'human', 
+      name: 'Private Jackson', 
+      type: 'Soldier',
+      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1 } 
+    });
+    cards.push({ 
+      id: 'h_soldier_4', 
+      faction: 'human', 
+      name: 'Corporal Kim', 
+      type: 'Soldier',
+      stats: { health: 3, attacks: 1, range: 1, initiative: 3, points: 1, ability: 'If adjacent to one or more aliens, gain 2 strength and 1 attack.' } 
+    });
+    
+    // 4 Medics
+    cards.push({ 
+      id: 'h_medic_0', 
+      faction: 'human', 
+      name: 'Dr. Chen', 
+      type: 'Medic',
+      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
+    });
+    cards.push({ 
+      id: 'h_medic_1', 
+      faction: 'human', 
+      name: 'Medic Sarah', 
+      type: 'Medic',
+      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
+    });
+    cards.push({ 
+      id: 'h_medic_2', 
+      faction: 'human', 
+      name: 'Dr. Patel', 
+      type: 'Medic',
+      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
+    });
+    cards.push({ 
+      id: 'h_medic_3', 
+      faction: 'human', 
+      name: 'Nurse Williams', 
+      type: 'Medic',
+      stats: { health: 2, attacks: 0, range: 0, initiative: 5, points: 2, ability: 'Heal adjacent allies' } 
+    });
+    
+    // 3 Tanks
+    cards.push({ 
+      id: 'h_tank_0', 
+      faction: 'human', 
+      name: 'Tank Unit Alpha', 
+      type: 'Tank',
+      stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } 
+    });
+    cards.push({ 
+      id: 'h_tank_1', 
+      faction: 'human', 
+      name: 'Heavy Armor Beta', 
+      type: 'Tank',
+      stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } 
+    });
+    cards.push({ 
+      id: 'h_tank_2', 
+      faction: 'human', 
+      name: 'Tank Unit Gamma', 
+      type: 'Tank',
+      stats: { health: 5, attacks: 1, range: 1, initiative: 2, points: 1 } 
+    });
+    
+    // 2 Snipers
+    cards.push({ 
+      id: 'h_sniper_0', 
+      faction: 'human', 
+      name: 'Eagle Eye Morgan', 
+      type: 'Sniper',
+      stats: { health: 2, attacks: 1, range: 3, initiative: 4, points: 2 } 
+    });
+    cards.push({ 
+      id: 'h_sniper_1', 
+      faction: 'human', 
+      name: 'Sharpshooter Elena', 
+      type: 'Sniper',
+      stats: { health: 2, attacks: 1, range: 3, initiative: 4, points: 2 } 
+    });
+    
     // 1 Scout
-    cards.push({ id: 'h_scout_0', faction: 'human', name: 'Scout', stats: { health: 1, attacks: 0, range: 0, initiative: 7, points: 1 } });
+    cards.push({ 
+      id: 'h_scout_0', 
+      faction: 'human', 
+      name: 'Scout Rodriguez', 
+      type: 'Scout',
+      stats: { health: 1, attacks: 0, range: 0, initiative: 7, points: 1 } 
+    });
+    
     return cards;
   }
 
   private createAlienDeck(): CharacterCard[] {
     const cards: CharacterCard[] = [];
-    // 5 Drone
-    for (let i = 0; i < 5; i++) {
-      cards.push({ id: `a_drone_${i}`, faction: 'alien', name: 'Drone', stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } });
-    }
-    // 4 Parasite
-    for (let i = 0; i < 4; i++) {
-      cards.push({ id: `a_parasite_${i}`, faction: 'alien', name: 'Parasite', stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } });
-    }
-    // 3 Beast
-    for (let i = 0; i < 3; i++) {
-      cards.push({ id: `a_beast_${i}`, faction: 'alien', name: 'Beast', stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } });
-    }
-    // 2 Mutant
-    for (let i = 0; i < 2; i++) {
-      cards.push({ id: `a_mutant_${i}`, faction: 'alien', name: 'Mutant', stats: { health: 3, attacks: 2, range: 1, initiative: 3, points: 1 } });
-    }
+    
+    // 5 Drones
+    cards.push({ 
+      id: 'a_drone_0', 
+      faction: 'alien', 
+      name: 'Drone Alpha-7', 
+      type: 'Drone',
+      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_drone_1', 
+      faction: 'alien', 
+      name: 'Drone Beta-3', 
+      type: 'Drone',
+      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_drone_2', 
+      faction: 'alien', 
+      name: 'Drone Gamma-9', 
+      type: 'Drone',
+      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_drone_3', 
+      faction: 'alien', 
+      name: 'Drone Delta-5', 
+      type: 'Drone',
+      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_drone_4', 
+      faction: 'alien', 
+      name: 'Drone Epsilon-1', 
+      type: 'Drone',
+      stats: { health: 2, attacks: 1, range: 2, initiative: 2, points: 1 } 
+    });
+    
+    // 4 Parasites
+    cards.push({ 
+      id: 'a_parasite_0', 
+      faction: 'alien', 
+      name: 'Creeper', 
+      type: 'Parasite',
+      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_parasite_1', 
+      faction: 'alien', 
+      name: 'Crawler', 
+      type: 'Parasite',
+      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_parasite_2', 
+      faction: 'alien', 
+      name: 'Leech', 
+      type: 'Parasite',
+      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_parasite_3', 
+      faction: 'alien', 
+      name: 'Infestor', 
+      type: 'Parasite',
+      stats: { health: 1, attacks: 1, range: 1, initiative: 6, points: 1 } 
+    });
+    
+    // 3 Beasts
+    cards.push({ 
+      id: 'a_beast_0', 
+      faction: 'alien', 
+      name: 'Ravager', 
+      type: 'Beast',
+      stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } 
+    });
+    cards.push({ 
+      id: 'a_beast_1', 
+      faction: 'alien', 
+      name: 'Devourer', 
+      type: 'Beast',
+      stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } 
+    });
+    cards.push({ 
+      id: 'a_beast_2', 
+      faction: 'alien', 
+      name: 'Stalker', 
+      type: 'Beast',
+      stats: { health: 4, attacks: 1, range: 2, initiative: 2, points: 2 } 
+    });
+    
+    // 2 Mutants
+    cards.push({ 
+      id: 'a_mutant_0', 
+      faction: 'alien', 
+      name: 'Abomination', 
+      type: 'Mutant',
+      stats: { health: 3, attacks: 2, range: 1, initiative: 3, points: 1 } 
+    });
+    cards.push({ 
+      id: 'a_mutant_1', 
+      faction: 'alien', 
+      name: 'Monstrosity', 
+      type: 'Mutant',
+      stats: { health: 3, attacks: 2, range: 1, initiative: 3, points: 1 } 
+    });
+    
     // 1 Overlord
-    cards.push({ id: 'a_overlord_0', faction: 'alien', name: 'Overlord', stats: { health: 4, attacks: 2, range: 1, initiative: 1, points: 2 } });
+    cards.push({ 
+      id: 'a_overlord_0', 
+      faction: 'alien', 
+      name: 'Xar\'thul the Eternal', 
+      type: 'Overlord',
+      stats: { health: 4, attacks: 2, range: 1, initiative: 1, points: 2 } 
+    });
+    
     return cards;
   }
 

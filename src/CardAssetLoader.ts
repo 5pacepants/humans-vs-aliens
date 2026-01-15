@@ -4,7 +4,11 @@ interface CardAssets {
   frameHuman?: HTMLImageElement;
   healthIconHuman?: HTMLImageElement;
   costIconHuman?: HTMLImageElement;
+  frameAlien?: HTMLImageElement;
+  healthIconAlien?: HTMLImageElement;
+  costIconAlien?: HTMLImageElement;
   characterPlaceholder?: HTMLImageElement;
+  characterAlienPlaceholder?: HTMLImageElement;
 }
 
 export class CardAssetLoader {
@@ -46,7 +50,11 @@ export class CardAssetLoader {
       frameHuman: 'frame-human.png',
       healthIconHuman: 'health-icon-human.png',
       costIconHuman: 'cost-icon-human.png',
-      characterPlaceholder: 'character-human-placeholder.png'
+      frameAlien: 'frame-alien.png',
+      healthIconAlien: 'health-icon-alien.png',
+      costIconAlien: 'cost-icon-alien.png',
+      characterPlaceholder: 'character-human-placeholder.png',
+      characterAlienPlaceholder: 'character-alien-placeholder.png'
     };
     return filenames[assetKey] || assetKey;
   }
@@ -56,7 +64,7 @@ export class CardAssetLoader {
   }
 
   preloadAll() {
-    const keys = ['frameHuman', 'healthIconHuman', 'costIconHuman', 'characterPlaceholder'];
+    const keys = ['frameHuman', 'healthIconHuman', 'costIconHuman', 'frameAlien', 'healthIconAlien', 'costIconAlien', 'characterPlaceholder', 'characterAlienPlaceholder'];
     keys.forEach(key => {
       this.loadAsset(key).catch(err => console.warn(err));
     });

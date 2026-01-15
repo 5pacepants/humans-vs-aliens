@@ -2,6 +2,13 @@
 
 export type HexTerrain = 'grass' | 'water' | 'forest' | 'toxic' | 'mountain';
 
+// Card types for both factions
+export type CardType = 
+  // Human types
+  | 'Soldier' | 'Medic' | 'Tank' | 'Sniper' | 'Scout' | 'Commander' | 'Engineer'
+  // Alien types
+  | 'Drone' | 'Parasite' | 'Beast' | 'Mutant' | 'Overlord' | 'Broodmother' | 'Hunter';
+
 export interface Hex {
   q: number; // axial coordinate q
   r: number; // axial coordinate r
@@ -22,7 +29,8 @@ export interface CharacterStats {
 export interface CharacterCard {
   id: string;
   faction: 'human' | 'alien';
-  name: string;
+  name: string; // Specific name like "General Johnson"
+  type: CardType; // Card type like "Commander", "Soldier", etc.
   stats: CharacterStats;
 }
 
