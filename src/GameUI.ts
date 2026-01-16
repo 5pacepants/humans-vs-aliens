@@ -580,11 +580,11 @@ export class GameUI {
       this.ctx.textBaseline = 'alphabetic';
     }
 
-    // Scoring modal in center of board
-    if (gameState.phase === 'scoring') {
+    // Battle log modal in center of board
+    if (gameState.phase === 'battleLog') {
       const boardWidth = this.canvas.width * 0.6;
-      const modalWidth = 600;
-      const modalHeight = 400;
+      const modalWidth = 600 * 2.5; // mycket bredare
+      const modalHeight = 400 * 2.2 * 1.1;
       const modalX = (boardWidth - modalWidth) / 2;
       const modalY = (this.canvas.height - modalHeight) / 2;
 
@@ -609,23 +609,33 @@ export class GameUI {
       this.ctx.shadowBlur = 10;
       this.ctx.shadowOffsetX = 3;
       this.ctx.shadowOffsetY = 3;
-      this.ctx.fillText('BATTLE RESULTS', modalX + modalWidth / 2, modalY + 70);
+      this.ctx.fillText('BATTLE LOG', modalX + modalWidth / 2, modalY + 70);
 
-      // Draw scores
-      this.ctx.font = 'bold 36px "Smooch Sans", sans-serif';
-      this.ctx.fillText(`Humans: ${gameState.humanScore}`, modalX + modalWidth / 2, modalY + 160);
-      this.ctx.fillText(`Aliens: ${gameState.alienScore}`, modalX + modalWidth / 2, modalY + 210);
-
-      // Draw winner
-      if (gameState.winner) {
-        this.ctx.font = 'bold 56px "Smooch Sans", sans-serif';
-        this.ctx.fillStyle = gameState.winner === 'human' ? '#4A90E2' : '#E24A4A';
-        this.ctx.fillText(`${gameState.winner.toUpperCase()} WIN!`, modalX + modalWidth / 2, modalY + 300);
-      }
-
-      // Reset shadow and alignment
+      // Draw log lines
+      this.ctx.font = '19px Quicksand, sans-serif';
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.textAlign = 'left';
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
+      let y = modalY + 120;
+      const lineHeight = 32;
+      const colWidth = (modalWidth - 60) / 2;
+      let col = 0;
+      let linesDrawn = 0;
+      if (gameState.battleLog) {
+        for (const line of gameState.battleLog) {
+          this.ctx.fillText(line, modalX + 30 + col * colWidth, y);
+          y += lineHeight;
+          linesDrawn++;
+          // Om vi når botten av första kolumnen, byt till nästa
+          if (y > modalY + modalHeight - 40) {
+            col++;
+            y = modalY + 120;
+          }
+        }
+      }
+
+      // Reset alignment
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
     }

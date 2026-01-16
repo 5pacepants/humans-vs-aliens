@@ -26,158 +26,191 @@ export class Game {
       currentCombatIndex: 0,
       humanScore: 0,
       alienScore: 0,
+      battleLog: [],
     };
   }
 
   private createHumanDeck(): CharacterCard[] {
-    const cards: CharacterCard[] = [];
-    
-    // New character design from GOALS.md
-    
-    cards.push({ 
-      id: 'h_commander_0', 
-      faction: 'human', 
-      name: 'General Johnson', 
-      type: 'Commander',
-      stats: { 
-        health: 3, 
-        damage: 2, 
-        range: 2, 
-        attacks: 2, 
-        initiative: 3, 
-        points: 1,
-        rareness: 3,
-        ability: 'All adjacent humans has +1 attack' 
-      } 
-    });
-    
-    cards.push({ 
-      id: 'h_sniper_0', 
-      faction: 'human', 
-      name: 'Hannah Honor', 
-      type: 'Sniper',
-      stats: { 
-        health: 1, 
-        damage: 1, 
-        range: 4, 
-        attacks: 2, 
-        initiative: 2, 
-        points: 2,
-        rareness: 4,
-        ability: 'If only adjacent to one more character, gain +1 damage' 
-      } 
-    });
-    
-    cards.push({ 
-      id: 'h_medic_0', 
-      faction: 'human', 
-      name: 'Nurse Tender', 
-      type: 'Medic',
-      stats: { 
-        health: 5, 
-        damage: 1, 
-        range: 1, 
-        attacks: 1, 
-        initiative: 4, 
-        points: 0,
-        rareness: 1,
-        ability: 'Adjacent humans has a 30% chance to ressurect when killed. (Applies one time per adjacent human)' 
-      } 
-    });
-    
-    cards.push({ 
-      id: 'h_soldier_0', 
-      faction: 'human', 
-      name: 'Heavy Gunner Jack', 
-      type: 'Soldier',
-      stats: { 
-        health: 1, 
-        damage: 4, 
-        range: 1, 
-        attacks: 1, 
-        initiative: 1, 
-        points: 2,
-        rareness: 2
-      } 
-    });
-    
-    return cards;
+    // Pool av möjliga human-kort
+    const pool: CharacterCard[] = [
+      {
+        id: 'h_commander',
+        faction: 'human',
+        name: 'General Johnson',
+        type: 'Commander',
+        stats: {
+          health: 3,
+          damage: 2,
+          range: 2,
+          attacks: 2,
+          initiative: 3,
+          points: 1,
+          rareness: 3,
+          ability: 'All adjacent humans has +1 attack'
+        }
+      },
+      {
+        id: 'h_sniper',
+        faction: 'human',
+        name: 'Hannah Honor',
+        type: 'Sniper',
+        stats: {
+          health: 1,
+          damage: 1,
+          range: 4,
+          attacks: 2,
+          initiative: 2,
+          points: 2,
+          rareness: 4,
+          ability: 'If only adjacent to one more character, gain +1 damage'
+        }
+      },
+      {
+        id: 'h_medic',
+        faction: 'human',
+        name: 'Nurse Tender',
+        type: 'Medic',
+        stats: {
+          health: 5,
+          damage: 1,
+          range: 1,
+          attacks: 1,
+          initiative: 4,
+          points: 0,
+          rareness: 1,
+          ability: 'Adjacent humans has a 30% chance to ressurect when killed. (Applies one time per adjacent human)'
+        }
+      },
+      {
+        id: 'h_soldier',
+        faction: 'human',
+        name: 'Heavy Gunner Jack',
+        type: 'Soldier',
+        stats: {
+          health: 1,
+          damage: 4,
+          range: 1,
+          attacks: 1,
+          initiative: 1,
+          points: 2,
+          rareness: 2
+        }
+      }
+    ];
+
+    // Skapa en viktad lista baserat på rarity (lägre rarity = vanligare)
+    const weighted: CharacterCard[] = [];
+    for (const card of pool) {
+      // rarity: 1=vanligast, 4=sällsyntast
+      const weight = 5 - card.stats.rareness; // 4->1, 1->4
+      for (let i = 0; i < weight; i++) {
+        weighted.push(card);
+      }
+    }
+
+    // Dra 20 kort slumpmässigt
+    const deck: CharacterCard[] = [];
+    for (let i = 0; i < 20; i++) {
+      const idx = Math.floor(Math.random() * weighted.length);
+      // Kopiera kortet och ge unikt id
+      const base = weighted[idx];
+      deck.push({
+        ...base,
+        id: base.id + '_' + i
+      });
+    }
+    return deck;
   }
 
   private createAlienDeck(): CharacterCard[] {
-    const cards: CharacterCard[] = [];
-    
-    // New character design from GOALS.md
-    
-    cards.push({ 
-      id: 'a_soldier_0', 
-      faction: 'alien', 
-      name: 'Pilot Frnuhuh', 
-      type: 'Soldier',
-      stats: { 
-        health: 2, 
-        damage: 3, 
-        range: 1, 
-        attacks: 2, 
-        initiative: 2, 
-        points: 1,
-        rareness: 1,
-        ability: 'If Frnuhuh has no adjacent aliens, he gains double the number of attacks' 
-      } 
-    });
-    
-    cards.push({ 
-      id: 'a_commander_0', 
-      faction: 'alien', 
-      name: 'Elder K\'tharr', 
-      type: 'Commander',
-      stats: { 
-        health: 3, 
-        damage: 2, 
-        range: 1, 
-        attacks: 1, 
-        initiative: 1, 
-        points: 2,
-        rareness: 4,
-        ability: 'All adjacent enemies lose 1 range due to psychic interference.' 
-      } 
-    });
-    
-    cards.push({ 
-      id: 'a_medic_0', 
-      faction: 'alien', 
-      name: 'Mutant Vor', 
-      type: 'Medic',
-      stats: { 
-        health: 2, 
-        damage: 3, 
-        range: 1, 
-        attacks: 1, 
-        initiative: 4, 
-        points: 2,
-        rareness: 3,
-        ability: 'Heals the first attack he receives' 
-      } 
-    });
-    
-    cards.push({ 
-      id: 'a_sniper_0', 
-      faction: 'alien', 
-      name: 'Warlord Vekkor', 
-      type: 'Sniper',
-      stats: { 
-        health: 2, 
-        damage: 3, 
-        range: 5, 
-        attacks: 1, 
-        initiative: 3, 
-        points: 0,
-        rareness: 2,
-        ability: 'Increases the range of adjacent friendly aliens by +1.' 
-      } 
-    });
-    
-    return cards;
+    // Pool av möjliga alien-kort
+    const pool: CharacterCard[] = [
+      {
+        id: 'a_soldier',
+        faction: 'alien',
+        name: 'Pilot Frnuhuh',
+        type: 'Soldier',
+        stats: {
+          health: 2,
+          damage: 3,
+          range: 1,
+          attacks: 2,
+          initiative: 2,
+          points: 1,
+          rareness: 1,
+          ability: 'If Frnuhuh has no adjacent aliens, he gains double the number of attacks'
+        }
+      },
+      {
+        id: 'a_commander',
+        faction: 'alien',
+        name: "Elder K'tharr",
+        type: 'Commander',
+        stats: {
+          health: 3,
+          damage: 2,
+          range: 1,
+          attacks: 1,
+          initiative: 1,
+          points: 2,
+          rareness: 4,
+          ability: 'All adjacent enemies lose 1 range due to psychic interference.'
+        }
+      },
+      {
+        id: 'a_medic',
+        faction: 'alien',
+        name: 'Mutant Vor',
+        type: 'Medic',
+        stats: {
+          health: 2,
+          damage: 3,
+          range: 1,
+          attacks: 1,
+          initiative: 4,
+          points: 2,
+          rareness: 3,
+          ability: 'Heals the first attack he receives'
+        }
+      },
+      {
+        id: 'a_sniper',
+        faction: 'alien',
+        name: 'Warlord Vekkor',
+        type: 'Sniper',
+        stats: {
+          health: 2,
+          damage: 3,
+          range: 5,
+          attacks: 1,
+          initiative: 3,
+          points: 0,
+          rareness: 2,
+          ability: 'Increases the range of adjacent friendly aliens by +1.'
+        }
+      }
+    ];
+
+    // Skapa en viktad lista baserat på rarity (lägre rarity = vanligare)
+    const weighted: CharacterCard[] = [];
+    for (const card of pool) {
+      const weight = 5 - card.stats.rareness;
+      for (let i = 0; i < weight; i++) {
+        weighted.push(card);
+      }
+    }
+
+    // Dra 20 kort slumpmässigt
+    const deck: CharacterCard[] = [];
+    for (let i = 0; i < 20; i++) {
+      const idx = Math.floor(Math.random() * weighted.length);
+      const base = weighted[idx];
+      deck.push({
+        ...base,
+        id: base.id + '_' + i
+      });
+    }
+    return deck;
   }
 
   drawCards() {
@@ -286,11 +319,23 @@ export class Game {
 
   attackTarget(q: number, r: number) {
     if (!this.state.selectedAttacker) return;
+    const attacker = this.state.selectedAttacker;
     const target = this.state.placedCharacters.find(p => p.hex.q === q && p.hex.r === r);
-    if (target && target.card.faction !== this.state.selectedAttacker.card.faction && this.isInRange(this.state.selectedAttacker, target)) {
+    if (target && target.card.faction !== attacker.card.faction && this.isInRange(attacker, target)) {
+      // Logga attack
+      if (this.state.battleLog) {
+        this.state.battleLog.push(`${attacker.card.name} attacks ${target.card.name}.`);
+      }
       // Deal damage
-      target.card.stats.health -= this.state.selectedAttacker.card.stats.attacks;
+      const damage = attacker.card.stats.attacks;
+      target.card.stats.health -= damage;
+      if (this.state.battleLog) {
+        this.state.battleLog.push(`${target.card.name} loses ${damage} health.`);
+      }
       if (target.card.stats.health <= 0) {
+        if (this.state.battleLog) {
+          this.state.battleLog.push(`${target.card.name} dies.`);
+        }
         // Remove from placedCharacters and combatOrder
         this.state.placedCharacters = this.state.placedCharacters.filter(p => p !== target);
         this.state.combatOrder = this.state.combatOrder.filter(co => co !== target);
@@ -461,35 +506,124 @@ export class Game {
   }
 
   startBattle() {
-    // Calculate scores
-    let humanScore = 0;
-    let alienScore = 0;
+        // Beräkna slutpoäng och vinnare efter striden
+        let humanScore = 0;
+        let alienScore = 0;
+        for (const placed of this.state.placedCharacters) {
+          const hexPoints = placed.hex.value || 0;
+          const cardPoints = placed.card.stats.points;
+          const totalPoints = hexPoints + cardPoints;
+          if (placed.card.faction === 'human') {
+            humanScore += totalPoints;
+          } else {
+            alienScore += totalPoints;
+          }
+        }
+        let winner = '';
+        if (humanScore > alienScore) {
+          winner = 'Humans win!';
+        } else if (alienScore > humanScore) {
+          winner = 'Aliens win!';
+        } else {
+          winner = 'Tie!';
+        }
+        // Lägg till summering i battle log
+        this.state.battleLog.push('');
+        this.state.battleLog.push('Result:');
+        this.state.battleLog.push(`Humans: ${humanScore} points`);
+        this.state.battleLog.push(`Aliens: ${alienScore} points`);
+        this.state.battleLog.push(winner);
+    // Initiera battleLog
+    this.state.battleLog = [];
 
+    // Skapa namn med index om flera av samma typ finns
+    const nameCount: Record<string, number> = {};
+    const nameMap: Map<CharacterCard, string> = new Map();
     for (const placed of this.state.placedCharacters) {
-      const hexPoints = placed.hex.value || 0;
-      const cardPoints = placed.card.stats.points;
-      const totalPoints = hexPoints + cardPoints;
+      const baseName = placed.card.name;
+      nameCount[baseName] = (nameCount[baseName] || 0) + 1;
+      nameMap.set(placed.card, `${baseName} (${nameCount[baseName]})`);
+    }
 
-      if (placed.card.faction === 'human') {
-        humanScore += totalPoints;
-      } else {
-        alienScore += totalPoints;
+    // Log abilities (General Johnson)
+    for (const placed of this.state.placedCharacters) {
+      if (placed.card.name === 'General Johnson') {
+        for (const target of this.state.placedCharacters) {
+          if (
+            target.card.faction === 'human' &&
+            target !== placed &&
+            this.hexDistance(placed.hex, target.hex) === 1
+          ) {
+            this.state.battleLog.push(`${nameMap.get(placed.card)} gives ${nameMap.get(target.card)} +1 attack.`);
+            // Simulera +1 attack (lägg till temporärt, återställs ej)
+            if (!target.card.stats._originalAttacks) {
+              target.card.stats._originalAttacks = target.card.stats.attacks;
+            }
+            target.card.stats.attacks += 1;
+          }
+        }
       }
     }
 
-    this.state.humanScore = humanScore;
-    this.state.alienScore = alienScore;
+    // Sortera alla placerade karaktärer efter initiativ (högst först)
+    let combatOrder = [...this.state.placedCharacters].sort((a, b) => b.card.stats.initiative - a.card.stats.initiative);
 
-    // Determine winner
-    if (humanScore > alienScore) {
-      this.state.winner = 'human';
-    } else if (alienScore > humanScore) {
-      this.state.winner = 'alien';
-    } else {
-      this.state.winner = 'tie';
+    // Simulera striden: varje karaktär attackerar närmast motståndare inom range
+    for (const attacker of combatOrder) {
+      const numAttacks = attacker.card.stats.attacks;
+      for (let attackNum = 0; attackNum < numAttacks; attackNum++) {
+        // Hitta närmaste motståndare inom range
+        const enemies = this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction);
+        let closestEnemy = null;
+        let minDist = Infinity;
+        for (const enemy of enemies) {
+          const dist = this.hexDistance(attacker.hex, enemy.hex);
+          if (dist <= attacker.card.stats.range && dist < minDist) {
+            minDist = dist;
+            closestEnemy = enemy;
+          }
+        }
+        if (closestEnemy) {
+          // Logga attack med damage och indexnamn
+          const damage = attacker.card.stats.damage ?? attacker.card.stats.attacks;
+          this.state.battleLog.push(`${nameMap.get(attacker.card)} attacks ${nameMap.get(closestEnemy.card)} for ${damage} damage.`);
+          // Skada
+          closestEnemy.card.stats.health -= damage;
+          this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} loses ${damage} health.`);
+          // Dödsfall eller återstående health
+          if (closestEnemy.card.stats.health <= 0) {
+            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} dies.`);
+            // Ta bort från placerade karaktärer
+            this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc !== closestEnemy);
+          } else {
+            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} has ${closestEnemy.card.stats.health} health remaining.`);
+          }
+        }
+        // Om inga fiender kvar, bryt attacker
+        if (this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction).length === 0) {
+          break;
+        }
+      }
     }
 
-    this.state.phase = 'scoring';
+    // Återställ eventuella temporära attacker
+    for (const placed of this.state.placedCharacters) {
+      if (placed.card.stats._originalAttacks !== undefined) {
+        placed.card.stats.attacks = placed.card.stats._originalAttacks;
+        delete placed.card.stats._originalAttacks;
+      }
+    }
+
+    // När loggen är klar, visa den för spelaren innan scoring
+    this.state.phase = 'battleLog';
     this.onUpdate();
+  }
+
+  private hexDistance(a: Hex, b: Hex): number {
+    return Math.max(
+      Math.abs(a.q - b.q),
+      Math.abs(a.r - b.r),
+      Math.abs((-a.q - a.r) - (-b.q - b.r))
+    );
   }
 }

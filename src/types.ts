@@ -76,4 +76,5 @@ export interface GameState {
   humanScore: number;
   alienScore: number;
   winner?: 'human' | 'alien' | 'tie';
+  battleLog?: string[]; // log of battle events
 }
