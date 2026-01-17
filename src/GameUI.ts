@@ -82,8 +82,8 @@ export class GameUI {
     }
 
     // Draw cardbacks at top of UI in 3-column layout (these ARE the decks)
-    const cardbackWidth = 304; // Same as drawn cards
-    const cardbackHeight = 487; // Same as drawn cards
+    const cardbackWidth = 304 * 1.02; // 2% större
+    const cardbackHeight = 487 * 1.02; // 2% större
     const cardbackSpacing = 10;
     const cardbackStartY = 50;
     const totalCardbackWidth = cardbackWidth * 3 + cardbackSpacing * 2;

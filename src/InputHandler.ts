@@ -65,8 +65,8 @@ export class InputHandler {
         }
 
       // Cardback dimensions and positions
-      const cardbackWidth = 304;
-      const cardbackHeight = 487;
+      const cardbackWidth = 304 * 1.02;
+      const cardbackHeight = 487 * 1.02;
       const cardbackSpacing = 10;
       const cardbackStartY = 50;
       const uiWidth = this.canvas.width - boardWidth;
@@ -223,8 +223,8 @@ export class InputHandler {
       }
 
       // Cardback dimensions and positions
-      const cardbackWidth = 304;
-      const cardbackHeight = 487;
+      const cardbackWidth = 304 * 1.02;
+      const cardbackHeight = 487 * 1.02;
       const cardbackSpacing = 10;
       const cardbackStartY = 50;
       const uiWidth = this.canvas.width - boardWidth;
