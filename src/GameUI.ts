@@ -294,20 +294,20 @@ export class GameUI {
       const animationDuration = 300; // milliseconds
       
       // Initialize or update scale animation
-      if (gameState.hoverEventStartTime === undefined && isHovered) {
-        gameState.hoverEventStartTime = Date.now();
-        gameState.hoverEventScale = 1.0;
+      if (gameState.hoverStartTime === undefined && isHovered) {
+        gameState.hoverStartTime = Date.now();
+        gameState.hoverCardScale = 1.0;
       } else if (!isHovered) {
-        gameState.hoverEventStartTime = undefined;
-        gameState.hoverEventScale = 1.0;
+        gameState.hoverStartTime = undefined;
+        gameState.hoverCardScale = 1.0;
       }
       
-      if (gameState.hoverEventStartTime !== undefined) {
-        const elapsed = Date.now() - gameState.hoverEventStartTime;
+      if (gameState.hoverStartTime !== undefined) {
+        const elapsed = Date.now() - gameState.hoverStartTime;
         const progress = Math.min(elapsed / animationDuration, 1.0);
         // Ease-out cubic for smoother animation
         const easedProgress = 1 - Math.pow(1 - progress, 3);
-        gameState.hoverEventScale = 1.0 + (targetScale - 1.0) * easedProgress;
+        gameState.hoverCardScale = 1.0 + (targetScale - 1.0) * easedProgress;
         
         // Request another frame if animation not complete
         if (progress < 1.0) {
@@ -315,7 +315,7 @@ export class GameUI {
         }
       }
       
-      const currentScale = gameState.hoverEventScale ?? 1.0;
+      const currentScale = gameState.hoverCardScale ?? 1.0;
       const scaledWidth = eventCardWidth * currentScale;
       const scaledHeight = eventCardHeight * currentScale;
       const scaledX = eventCardX - (scaledWidth - eventCardWidth) / 2;
@@ -638,6 +638,29 @@ export class GameUI {
       // Reset alignment
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
+
+        // Draw 'Continue' button at the bottom center of the modal
+        const continueBtnWidth = 260;
+        const continueBtnHeight = 60;
+        const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
+        const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+        // Button background
+        this.ctx.fillStyle = gameState.hoverContinueButton ? '#3A7A2A' : '#4CAF50';
+        this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 12);
+        this.ctx.fill();
+        // Button text
+        this.ctx.font = 'bold 32px "Smooch Sans", sans-serif';
+        this.ctx.fillStyle = '#F0D4A8';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.shadowBlur = 6;
+        this.ctx.fillText('Continue', continueBtnX + continueBtnWidth / 2, continueBtnY + continueBtnHeight / 2);
+        // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'alphabetic';
     }
   }
 

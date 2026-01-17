@@ -27,6 +27,7 @@ export class Game {
       humanScore: 0,
       alienScore: 0,
       battleLog: [],
+      hoverContinueButton: false,
     };
   }
 
@@ -506,6 +507,10 @@ export class Game {
   }
 
   startBattle() {
+        // Ta bort eventuell tidigare summering
+        const resultMarkers = ['Result:', 'Humans:', 'Aliens:', 'win!', 'Tie!'];
+        this.state.battleLog = (this.state.battleLog ?? []).filter(line => !resultMarkers.some(marker => line.includes(marker)));
+
         // Beräkna slutpoäng och vinnare efter striden
         let humanScore = 0;
         let alienScore = 0;
@@ -556,7 +561,9 @@ export class Game {
           ) {
             this.state.battleLog.push(`${nameMap.get(placed.card)} gives ${nameMap.get(target.card)} +1 attack.`);
             // Simulera +1 attack (lägg till temporärt, återställs ej)
-            if (!target.card.stats._originalAttacks) {
+            // @ts-ignore
+            if (!(' _originalAttacks' in target.card.stats)) {
+              // @ts-ignore
               target.card.stats._originalAttacks = target.card.stats.attacks;
             }
             target.card.stats.attacks += 1;
@@ -608,8 +615,11 @@ export class Game {
 
     // Återställ eventuella temporära attacker
     for (const placed of this.state.placedCharacters) {
+      // @ts-ignore
       if (placed.card.stats._originalAttacks !== undefined) {
+        // @ts-ignore
         placed.card.stats.attacks = placed.card.stats._originalAttacks;
+        // @ts-ignore
         delete placed.card.stats._originalAttacks;
       }
     }

@@ -47,6 +47,23 @@ export class InputHandler {
         }
       }
 
+        // Battle log 'Continue' button hover
+        if (this.game.state.phase === 'battleLog') {
+          const modalWidth = 600 * 2.5;
+          const modalHeight = 400 * 2.2 * 1.1;
+          const modalX = (boardWidth - modalWidth) / 2;
+          const modalY = (this.canvas.height - modalHeight) / 2;
+          const continueBtnWidth = 260;
+          const continueBtnHeight = 60;
+          const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
+          const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+          if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
+            this.game.state.hoverContinueButton = true;
+          } else {
+            this.game.state.hoverContinueButton = false;
+          }
+        }
+
       // Cardback dimensions and positions
       const cardbackWidth = 304;
       const cardbackHeight = 487;
@@ -140,6 +157,7 @@ export class InputHandler {
   }
 
   private handleClick(event: MouseEvent) {
+      console.log('Canvas click event:', event.clientX, event.clientY);
     const rect = this.canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -164,6 +182,29 @@ export class InputHandler {
       }
     }
 
+    // Always check for continue button click if phase is 'battleLog'
+    if (this.game.state.phase === 'battleLog') {
+      const modalWidth = 600 * 2.5;
+      const modalHeight = 400 * 2.2 * 1.1;
+      const modalX = (boardWidth - modalWidth) / 2;
+      const modalY = (this.canvas.height - modalHeight) / 2;
+      const continueBtnWidth = 260;
+      const continueBtnHeight = 60;
+      const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
+      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+      console.log('Continue button bounds:', continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight);
+      console.log('Mouse click:', x, y);
+      if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
+        console.log('Continue button clicked!');
+        this.game.state.hoverContinueButton = true;
+        this.game.state.phase = 'scoring';
+        if (typeof this.game.calculateScores === 'function') {
+          this.game.calculateScores();
+        }
+        this.game.update();
+        return;
+      }
+    }
     // Check if click on UI area (right 40%)
     if (x > uiX) {
       // Check for Battle button hover and click

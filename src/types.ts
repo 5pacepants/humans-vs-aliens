@@ -49,7 +49,8 @@ export interface GameState {
   eventDeck: EventCard[];
   placedCharacters: { hex: Hex; card: CharacterCard }[];
   currentPlayer: 'human' | 'alien';
-  phase: 'placement' | 'combat' | 'scoring';
+  phase: 'placement' | 'combat' | 'battleLog' | 'scoring';
+    hoverContinueButton?: boolean; // hovered continue button in battle log modal
   turn: number;
   drawnCards: CharacterCard[]; // current drawn cards for selection
   drawnCardsBackup?: CharacterCard[]; // backup of all drawn cards for right-click restore
