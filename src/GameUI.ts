@@ -662,6 +662,76 @@ export class GameUI {
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'alphabetic';
     }
+
+    // Scoring modal: show points and winner
+    if (gameState.phase === 'scoring') {
+      const boardWidth = this.canvas.width * 0.6;
+      const modalWidth = 600 * 2.5;
+      const modalHeight = 350 * 2.2;
+      const modalX = (boardWidth - modalWidth) / 2;
+      const modalY = (this.canvas.height - modalHeight) / 2;
+
+      // Draw semi-transparent backdrop
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
+
+      // Draw modal background
+      this.ctx.fillStyle = '#2a1810';
+      this.ctx.strokeStyle = '#F0D4A8';
+      this.ctx.lineWidth = 6;
+      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 20);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Draw title
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.font = 'bold 48px "Smooch Sans", sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowOffsetX = 3;
+      this.ctx.shadowOffsetY = 3;
+      this.ctx.fillText('RESULT', modalX + modalWidth / 2, modalY + 70);
+
+      // Draw scores
+      this.ctx.font = 'bold 38px Quicksand, sans-serif';
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      const scoreY = modalY + 160;
+      this.ctx.fillText(`Humans: ${gameState.humanScore} points`, modalX + modalWidth / 2, scoreY);
+      this.ctx.fillText(`Aliens: ${gameState.alienScore} points`, modalX + modalWidth / 2, scoreY + 60);
+
+      // Draw winner
+      let winner = '';
+      if (gameState.humanScore > gameState.alienScore) winner = 'Humans win!';
+      else if (gameState.humanScore < gameState.alienScore) winner = 'Aliens win!';
+      else winner = 'Draw!';
+      this.ctx.font = 'bold 44px "Smooch Sans", sans-serif';
+      this.ctx.fillStyle = '#FFD700';
+      this.ctx.fillText(winner, modalX + modalWidth / 2, scoreY + 140);
+
+      // Draw 'Continue' button at the bottom center of the modal
+      const continueBtnWidth = 260;
+      const continueBtnHeight = 60;
+      const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
+      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+      this.ctx.fillStyle = gameState.hoverContinueButton ? '#3A7A2A' : '#4CAF50';
+      this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 12);
+      this.ctx.fill();
+      this.ctx.font = 'bold 32px "Smooch Sans", sans-serif';
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.shadowBlur = 6;
+      this.ctx.fillText('Continue', continueBtnX + continueBtnWidth / 2, continueBtnY + continueBtnHeight / 2);
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'alphabetic';
+    }
   }
 
   private roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {

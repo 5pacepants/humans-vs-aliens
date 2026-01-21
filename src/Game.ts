@@ -376,11 +376,13 @@ export class Game {
     this.state.humanScore = 0;
     this.state.alienScore = 0;
     for (const pc of this.state.placedCharacters) {
-      const hexValue = pc.hex.value;
+      const hexPoints = pc.hex.value || 0;
+      const cardPoints = pc.card.stats.points || 0;
+      const totalPoints = hexPoints + cardPoints;
       if (pc.card.faction === 'human') {
-        this.state.humanScore += hexValue;
-      } else {
-        this.state.alienScore += hexValue;
+        this.state.humanScore += totalPoints;
+      } else if (pc.card.faction === 'alien') {
+        this.state.alienScore += totalPoints;
       }
     }
     if (this.state.humanScore > this.state.alienScore) {

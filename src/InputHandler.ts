@@ -205,6 +205,24 @@ export class InputHandler {
         return;
       }
     }
+    // Scoring modal 'Continue' button click
+    if (this.game.state.phase === 'scoring') {
+      const modalWidth = 600 * 2.5;
+      const modalHeight = 350 * 2.2;
+      const modalX = (boardWidth - modalWidth) / 2;
+      const modalY = (this.canvas.height - modalHeight) / 2;
+      const continueBtnWidth = 260;
+      const continueBtnHeight = 60;
+      const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
+      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+      if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
+        // Stäng resultatrutan, visa brädet och kvarvarande karaktärer
+        // Gå till "placement" så man ser brädet igen
+        this.game.state.phase = 'placement';
+        this.game.update();
+        return;
+      }
+    }
     // Check if click on UI area (right 40%)
     if (x > uiX) {
       // Check for Battle button hover and click
