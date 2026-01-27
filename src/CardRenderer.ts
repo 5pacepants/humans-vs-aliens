@@ -135,10 +135,13 @@ export class CardRenderer {
     ctx.fillText(factionText, factionX, factionY);
 
     // Draw darker background section for stats in lower left corner
-    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 35;
-    const statsBgHeight = 58;
+    // Make it wider for preview cards (when abilityFontSize is 13)
+    const isPreview = abilityFontSize === 13;
+    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 35 + (isPreview ? 18 : 0);
+    const statsBgHeight = 85; // Increased to fit Init stat
     const statsBgX = x + borderWidth + 5;
-    const statsBgY = y + height - borderWidth - cardPadding - statsBgHeight;
+    // Moved up 15px to accommodate additional stat line
+    const statsBgY = y + height - borderWidth - cardPadding - 73;
     ctx.fillStyle = darkBgColor;
     this.roundedRect(ctx, statsBgX, statsBgY, statsBgWidth, statsBgHeight, 6);
     ctx.fill();
@@ -436,9 +439,11 @@ export class CardRenderer {
     const statsLines = [
       `Range: ${card.stats.range}`,
       `Attacks: ${card.stats.attacks}`,
+      `Damage: ${card.stats.damage}`,
+      `Init: ${card.stats.initiative}`,
       `Points: ${card.stats.points}`
     ];
-    let statsY = y + height + 29;
+    let statsY = y + height + 14; // Moved up 15px to fit Init stat
     statsLines.forEach(line => {
       ctx.fillText(line, x + 4, statsY);
       statsY += 14;

@@ -163,6 +163,7 @@ export class Game {
         faction: 'alien',
         name: 'Mutant Vor',
         type: 'Medic',
+        image: 'mutant',
         stats: {
           health: 2,
           damage: 3,
@@ -179,6 +180,7 @@ export class Game {
         faction: 'alien',
         name: 'Warlord Vekkor',
         type: 'Sniper',
+        image: 'warlord-vekkor',
         stats: {
           health: 2,
           damage: 3,
@@ -554,19 +556,30 @@ export class Game {
 
     // Log abilities (General Johnson)
     for (const placed of this.state.placedCharacters) {
-      if (placed.card.name === 'General Johnson') {
-        for (const target of this.state.placedCharacters) {
-          if (
-            target.card.faction === 'human' &&
-            target !== placed &&
-            this.hexDistance(placed.hex, target.hex) === 1
-          ) {
-            this.state.battleLog.push(`${nameMap.get(placed.card)} gives ${nameMap.get(target.card)} +1 attack.`);
-            // Simulera +1 attack (lägg till temporärt, återställs ej)
-            // @ts-ignore
-            if (!(' _originalAttacks' in target.card.stats)) {
-              // @ts-ignore
-              target.card.stats._originalAttacks = target.card.stats.attacks;
+      if (placed.modifiers && placed.modifiers.length > 0) {
+        for (const modifier of placed.modifiers) {
+          if (modifier.source && modifier.stat && modifier.value) {
+            const sourceName = nameMap.get(modifier.source.card);
+            const targetName = nameMap.get(placed.card);
+            // Convert stat name to readable form (e.g., 'attacks' -> 'attack')
+            const statName = modifier.stat === 'attacks' ? 'attack' : modifier.stat;
+
+            // Check if this is a terrain effect (source === target with description)
+            const isTerrainEffect = modifier.source === placed && modifier.description;
+
+            // Format based on type
+            if (modifier.type === 'multiplier') {
+              if (isTerrainEffect) {
+                this.state.battleLog.push(`${modifier.description} gives ${targetName} x${modifier.value} ${statName}.`);
+              } else {
+                this.state.battleLog.push(`${sourceName} gives ${targetName} x${modifier.value} ${statName}.`);
+              }
+            } else {
+              if (isTerrainEffect) {
+                this.state.battleLog.push(`${modifier.description} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`);
+              } else {
+                this.state.battleLog.push(`${sourceName} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`);
+              }
             }
             target.card.stats.attacks += 1;
           }
