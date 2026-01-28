@@ -275,8 +275,8 @@ export class GameUI {
     const deckWidth = uiWidth - 20;
     const deckStartY = cardbackStartY + cardbackHeight + 20;
 
-    // Drawn event card - render it properly like other cards
-    if (gameState.drawnEvent) {
+    // Drawn event card - render it properly like other cards (but not if player is "holding" it for targeting)
+    if (gameState.drawnEvent && !gameState.eventTargetMode) {
       const eventCardWidth = 274; // Same as drawn cards
       const eventCardHeight = 438;
       const eventCardX = deckX + (deckWidth - eventCardWidth) / 2; // Center it
@@ -518,6 +518,45 @@ export class GameUI {
       this.cardRenderer.renderFrameAndCharacter(this.ctx, gameState.selectedCard, previewX, previewY, previewWidth, previewHeight);
     }
 
+    // Draw event card following mouse when in event target mode
+    if (gameState.eventTargetMode && gameState.drawnEvent) {
+      const boardWidth = this.canvas.width * 0.6;
+      const isOverBoard = gameState.mouseX < boardWidth;
+
+      // Determine target scale based on location
+      const targetScale = isOverBoard ? 0.5 : 1.0;
+
+      // Initialize or update target scale (reuse preview scale states)
+      if (gameState.previewTargetScale !== targetScale) {
+        gameState.previewTargetScale = targetScale;
+        gameState.previewScaleStartTime = Date.now();
+        if (gameState.previewScale === undefined) {
+          gameState.previewScale = targetScale;
+        }
+      }
+
+      // Animate scale
+      const animationDuration = 300;
+      if (gameState.previewScaleStartTime !== undefined && gameState.previewScale !== undefined) {
+        const elapsed = Date.now() - gameState.previewScaleStartTime;
+        const progress = Math.min(elapsed / animationDuration, 1.0);
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const startScale = gameState.previewScale;
+        gameState.previewScale = startScale + (targetScale - startScale) * easedProgress;
+
+        if (progress < 1.0) {
+          requestAnimationFrame(() => this.render(gameState));
+        }
+      }
+
+      const currentScale = gameState.previewScale ?? 1.0;
+      const previewWidth = 200 * currentScale;
+      const previewHeight = 320 * currentScale;
+      const previewX = gameState.mouseX - previewWidth / 2;
+      const previewY = gameState.mouseY - previewHeight * 0.3;
+      this.cardRenderer.renderCard(this.ctx, gameState.drawnEvent, previewX, previewY, previewWidth, previewHeight);
+    }
+
     // Autoplace button (for testing - remove later)
     if (gameState.phase === 'placement' && (gameState.humanDeck.length > 0 || gameState.alienDeck.length > 0)) {
       const autoButtonWidth = 200;
@@ -537,6 +576,31 @@ export class GameUI {
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('AUTOPLACE ALL', autoButtonX + autoButtonWidth / 2, autoButtonY + autoButtonHeight / 2);
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'alphabetic';
+    }
+
+    // "What just happened?" button - under autoplace button
+    if (gameState.phase === 'placement' && gameState.eventHistory.length > 0) {
+      const historyButtonWidth = 200;
+      const historyButtonHeight = 50;
+      const historyButtonX = boardWidth - historyButtonWidth - 20;
+      const historyButtonY = 80; // Below autoplace button (20 + 50 + 10)
+
+      const isHovered = gameState.hoverEventHistoryButton || false;
+
+      this.ctx.fillStyle = isHovered ? '#5a5a5a' : '#4a4a4a';
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 2;
+      this.roundedRect(this.ctx, historyButtonX, historyButtonY, historyButtonWidth, historyButtonHeight, 8);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = 'bold 16px Quicksand, sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('What just happened?', historyButtonX + historyButtonWidth / 2, historyButtonY + historyButtonHeight / 2);
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
     }
@@ -613,7 +677,6 @@ export class GameUI {
 
       // Draw log lines
       this.ctx.font = '19px Quicksand, sans-serif';
-      this.ctx.fillStyle = '#F0D4A8';
       this.ctx.textAlign = 'left';
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
@@ -622,8 +685,53 @@ export class GameUI {
       const colWidth = (modalWidth - 60) / 2;
       let col = 0;
       let linesDrawn = 0;
+
+      // Helper to determine message color
+      const getLogColor = (line: string): string => {
+        const humanNames = ['General Johnson', 'Hannah Honor', 'Nurse Tender', 'Heavy Gunner Jack'];
+        const alienNames = ['Pilot Frnuhuh', "Elder K'tharr", 'Mutant Vor', 'Warlord Vekkor'];
+
+        // Check if it's an ability message (yellow)
+        if (line.includes('gives') || line.includes('bonus damage') ||
+            line.includes('is resurrected') || line.includes('blocks the attack')) {
+          return '#FFD700'; // Yellow
+        }
+
+        // Check for human actions
+        const isHumanMessage = humanNames.some(name => line.startsWith(name));
+        if (isHumanMessage) {
+          if (line.includes('attacks') || line.includes('for') && line.includes('damage')) {
+            return '#4A9EFF'; // Blue - human does damage
+          }
+          if (line.includes('loses') || line.includes('takes')) {
+            return '#FF4A4A'; // Red - human takes damage
+          }
+          if (line.includes('dies')) {
+            return '#FF4A4A'; // Red - human dies
+          }
+        }
+
+        // Check for alien actions
+        const isAlienMessage = alienNames.some(name => line.startsWith(name));
+        if (isAlienMessage) {
+          if (line.includes('attacks') || line.includes('for') && line.includes('damage')) {
+            return '#4AFF4A'; // Green - alien does damage
+          }
+          if (line.includes('loses') || line.includes('takes')) {
+            return '#D946EF'; // Purple - alien takes damage
+          }
+          if (line.includes('dies')) {
+            return '#D946EF'; // Purple - alien dies
+          }
+        }
+
+        // Default color
+        return '#F0D4A8'; // Beige
+      };
+
       if (gameState.battleLog) {
         for (const line of gameState.battleLog) {
+          this.ctx.fillStyle = getLogColor(line);
           this.ctx.fillText(line, modalX + 30 + col * colWidth, y);
           y += lineHeight;
           linesDrawn++;
@@ -663,72 +771,52 @@ export class GameUI {
         this.ctx.textBaseline = 'alphabetic';
     }
 
-    // Scoring modal: show points and winner
-    if (gameState.phase === 'scoring') {
+    // Event History modal
+    if (gameState.showEventHistory && gameState.eventHistory.length > 0) {
       const boardWidth = this.canvas.width * 0.6;
-      const modalWidth = 600 * 2.5;
-      const modalHeight = 350 * 2.2;
+      const modalWidth = 500;
+      const modalHeight = Math.min(400, 100 + gameState.eventHistory.length * 30);
       const modalX = (boardWidth - modalWidth) / 2;
       const modalY = (this.canvas.height - modalHeight) / 2;
 
       // Draw semi-transparent backdrop
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
 
       // Draw modal background
       this.ctx.fillStyle = '#2a1810';
       this.ctx.strokeStyle = '#F0D4A8';
-      this.ctx.lineWidth = 6;
-      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 20);
+      this.ctx.lineWidth = 4;
+      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 15);
       this.ctx.fill();
       this.ctx.stroke();
 
       // Draw title
       this.ctx.fillStyle = '#F0D4A8';
-      this.ctx.font = 'bold 48px "Smooch Sans", sans-serif';
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 10;
-      this.ctx.shadowOffsetX = 3;
-      this.ctx.shadowOffsetY = 3;
-      this.ctx.fillText('RESULT', modalX + modalWidth / 2, modalY + 70);
-
-      // Draw scores
-      this.ctx.font = 'bold 38px Quicksand, sans-serif';
-      this.ctx.fillStyle = '#F0D4A8';
-      this.ctx.shadowColor = 'transparent';
-      this.ctx.shadowBlur = 0;
-      const scoreY = modalY + 160;
-      this.ctx.fillText(`Humans: ${gameState.humanScore} points`, modalX + modalWidth / 2, scoreY);
-      this.ctx.fillText(`Aliens: ${gameState.alienScore} points`, modalX + modalWidth / 2, scoreY + 60);
-
-      // Draw winner
-      let winner = '';
-      if (gameState.humanScore > gameState.alienScore) winner = 'Humans win!';
-      else if (gameState.humanScore < gameState.alienScore) winner = 'Aliens win!';
-      else winner = 'Draw!';
-      this.ctx.font = 'bold 44px "Smooch Sans", sans-serif';
-      this.ctx.fillStyle = '#FFD700';
-      this.ctx.fillText(winner, modalX + modalWidth / 2, scoreY + 140);
-
-      // Draw 'Continue' button at the bottom center of the modal
-      const continueBtnWidth = 260;
-      const continueBtnHeight = 60;
-      const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
-      this.ctx.fillStyle = gameState.hoverContinueButton ? '#3A7A2A' : '#4CAF50';
-      this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 12);
-      this.ctx.fill();
       this.ctx.font = 'bold 32px "Smooch Sans", sans-serif';
-      this.ctx.fillStyle = '#F0D4A8';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-      this.ctx.shadowBlur = 6;
-      this.ctx.fillText('Continue', continueBtnX + continueBtnWidth / 2, continueBtnY + continueBtnHeight / 2);
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowOffsetX = 2;
+      this.ctx.shadowOffsetY = 2;
+      this.ctx.fillText('What just happened?', modalX + modalWidth / 2, modalY + 40);
+
+      // Draw event history lines
+      this.ctx.font = '18px Quicksand, sans-serif';
+      this.ctx.fillStyle = '#F0D4A8';
+      this.ctx.textAlign = 'left';
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
+
+      let yPos = modalY + 80;
+      const lineHeight = 28;
+
+      for (const event of gameState.eventHistory.slice(-10)) { // Show last 10 events
+        this.ctx.fillText(event, modalX + 20, yPos);
+        yPos += lineHeight;
+      }
+
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
     }

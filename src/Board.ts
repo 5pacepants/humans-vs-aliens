@@ -14,7 +14,6 @@ export class Board {
   private cardRenderer: CardRenderer;
   private offscreenCanvas: HTMLCanvasElement;
   private offscreenCtx: CanvasRenderingContext2D;
-  private readonly SUPERSAMPLING_SCALE = 2; // 2x rendering for better quality
   private backgroundImage: HTMLImageElement;
 
   constructor(canvas: HTMLCanvasElement, gameState: GameState) {
@@ -131,7 +130,7 @@ export class Board {
     // Draw hex info box at top right of board area (only when hovering over a hex)
     if (this.gameState.hoverHex) {
       const infoBoxWidth = 470;
-      const infoBoxHeight = 180;
+      const infoBoxHeight = 200; // Increased to fit Damage stat
       const infoBoxX = boardWidth - infoBoxWidth - 10;
       const infoBoxY = 10;
       const cornerRadius = 8;
@@ -166,9 +165,9 @@ export class Board {
         
         const terrainExplanations: Record<HexTerrain, string> = {
           grass: 'Neutral terrain without effects',
-          water: 'Water terrain',
-          forest: 'Forest terrain',
-          toxic: 'Toxic swamp terrain',
+          water: 'Character loses 1 health (min 1)',
+          forest: 'Humans gain 1 range. Aliens lose 1 range (min 1)',
+          toxic: 'Aliens gain 1 damage. Humans lose 1 damage (min 1)',
           mountain: 'Impassable terrain'
         };
         
@@ -198,13 +197,50 @@ export class Board {
           this.ctx.fillText(`Type: ${placedChar.card.type}`, infoBoxX + 10, yPos);
           yPos += 20;
           
-          // Stats (abilityfonten)
+          // Stats (abilityfonten) - show derived stats with breakdown if modified
           this.ctx.font = '16px Quicksand, sans-serif';
-          this.ctx.fillText(`Range: ${placedChar.card.stats.range}`, infoBoxX + 10, yPos);
+
+          // Helper function to format stat with breakdown
+          const formatStat = (statName: string, statKey: string, original: number, derived?: number) => {
+            // Special handling for health with event damage
+            if (statKey === 'health' && placedChar.eventDamage && placedChar.eventDamage > 0) {
+              // Show event damage in breakdown
+              const originalHealth = original + placedChar.eventDamage;
+              return `${statName}: ${original} (${originalHealth}-${placedChar.eventDamage})`;
+            }
+
+            if (derived !== undefined && derived !== original && placedChar.modifiers) {
+              // Get modifiers for this stat
+              const statModifiers = placedChar.modifiers.filter((m: any) => m.stat === statKey);
+              const additiveSum = statModifiers
+                .filter((m: any) => m.type === 'modifier')
+                .reduce((sum: number, m: any) => sum + (m.value || 0), 0);
+              const multipliers = statModifiers.filter((m: any) => m.type === 'multiplier');
+
+              // Build breakdown string
+              if (additiveSum !== 0 && multipliers.length > 0) {
+                // Both additive and multiplicative
+                const multValue = multipliers[0].value || 1;
+                return `${statName}: ${derived} ((${original}${additiveSum > 0 ? '+' : ''}${additiveSum})×${multValue})`;
+              } else if (multipliers.length > 0) {
+                // Only multiplicative
+                const multValue = multipliers[0].value || 1;
+                return `${statName}: ${derived} (${original}×${multValue})`;
+              } else if (additiveSum !== 0) {
+                // Only additive
+                return `${statName}: ${derived} (${original}${additiveSum > 0 ? '+' : ''}${additiveSum})`;
+              }
+            }
+            return `${statName}: ${original}`;
+          };
+
+          this.ctx.fillText(formatStat('Range', 'range', placedChar.card.stats.range, placedChar.derived?.range), infoBoxX + 10, yPos);
           yPos += 18;
-          this.ctx.fillText(`Attacks: ${placedChar.card.stats.attacks}`, infoBoxX + 10, yPos);
+          this.ctx.fillText(formatStat('Attacks', 'attacks', placedChar.card.stats.attacks, placedChar.derived?.attacks), infoBoxX + 10, yPos);
           yPos += 18;
-          this.ctx.fillText(`Health: ${placedChar.card.stats.health}`, infoBoxX + 10, yPos);
+          this.ctx.fillText(formatStat('Damage', 'damage', placedChar.card.stats.damage, placedChar.derived?.damage), infoBoxX + 10, yPos);
+          yPos += 18;
+          this.ctx.fillText(formatStat('Health', 'health', placedChar.card.stats.health, placedChar.derived?.health), infoBoxX + 10, yPos);
           yPos += 20;
           
           // Points calculation (abilityfonten)
@@ -248,9 +284,9 @@ export class Board {
         this.drawHex(x, y);
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2;
-        
+
         // Character image now drawn in drawTerrainHex for proper layering
-        
+
         // Highlight current active in combat
         if (this.gameState.phase === 'combat' && this.gameState.combatOrder[this.gameState.currentCombatIndex] === placed) {
           this.ctx.strokeStyle = 'yellow';
@@ -311,28 +347,47 @@ export class Board {
       if (hoveredPlaced) {
         const previewWidth = 250;
         const previewHeight = 400;
+        const eventCardWidth = 220;
+        const eventCardHeight = 350;
         const mouseX = this.gameState.mouseX;
         const mouseY = this.gameState.mouseY;
         const boardWidth = this.canvas.width * 0.6;
         const boardCenterX = boardWidth / 2;
-        
+
+        // Calculate total width including event cards
+        const numEventCards = hoveredPlaced.eventEffects?.length || 0;
+        const eventCardsWidth = numEventCards > 0 ? (eventCardWidth + 10) * numEventCards : 0;
+        const totalWidth = previewWidth + eventCardsWidth;
+
         let previewX: number;
         let previewY = mouseY - previewHeight / 2; // Vertikalt centrerat med musen
-        
+
         // Bestäm vänster eller höger sida baserat på musens X-position
         if (mouseX < boardCenterX) {
           // Vänster sida av brädet - visa kortet till höger om musen
           previewX = mouseX + 30;
         } else {
           // Höger sida eller mittlinjen - visa kortet till vänster om musen
-          previewX = mouseX - previewWidth - 30;
+          previewX = mouseX - totalWidth - 30;
         }
-        
+
         // Se till att kortet inte går utanför canvas
-        previewX = Math.max(10, Math.min(previewX, boardWidth - previewWidth - 10));
+        previewX = Math.max(10, Math.min(previewX, boardWidth - totalWidth - 10));
         previewY = Math.max(10, Math.min(previewY, this.canvas.height - previewHeight - 10));
-        
+
+        // Render character card
         this.cardRenderer.renderCard(this.ctx, hoveredPlaced.card, previewX, previewY, previewWidth, previewHeight, 13);
+
+        // Render event cards to the right of character card
+        if (hoveredPlaced.eventEffects && hoveredPlaced.eventEffects.length > 0) {
+          let eventX = previewX + previewWidth + 10;
+          const eventY = previewY + (previewHeight - eventCardHeight) / 2; // Center vertically
+
+          for (const eventCard of hoveredPlaced.eventEffects) {
+            this.cardRenderer.renderCard(this.ctx, eventCard, eventX, eventY, eventCardWidth, eventCardHeight, 10);
+            eventX += eventCardWidth + 10;
+          }
+        }
       }
     }
     
@@ -416,18 +471,17 @@ export class Board {
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       this.ctx.fill();
       
-      // Draw character image
-      const charImage = this.cardRenderer['assetLoader'].getAsset(
-        placed.card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder'
-      );
-      
-      console.log('Drawing character:', {
-        hasImage: !!charImage,
-        complete: charImage?.complete,
-        faction: placed.card.faction,
-        x, y
-      });
-      
+      // Draw character image - use custom image if specified
+      let assetKey: string;
+      if (placed.card.image) {
+        assetKey = placed.card.image;
+        // Try to load the custom image if not already loaded
+        this.cardRenderer['assetLoader'].loadAsset(assetKey).catch((err: Error) => console.warn(err));
+      } else {
+        assetKey = placed.card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder';
+      }
+      const charImage = this.cardRenderer['assetLoader'].getAsset(assetKey);
+
       if (charImage && charImage.complete) {
         // Preserve image aspect ratio
         const aspectRatio = charImage.width / charImage.height;
@@ -439,6 +493,26 @@ export class Board {
         this.ctx.drawImage(charImage, imageX, imageY, imageWidth, imageHeight);
       }
       
+      this.ctx.restore();
+    }
+
+    // Draw event effect icons in lower half of hex if character has been affected
+    if (placed && placed.eventEffects && placed.eventEffects.length > 0) {
+      this.ctx.save();
+      this.ctx.font = '36px Arial';
+      this.ctx.textAlign = 'center';
+      this.ctx.shadowColor = 'black';
+      this.ctx.shadowBlur = 4;
+
+      // Map event names to icons
+      const eventIcons: Record<string, string> = {
+        'Thunderstorm': '⚡',
+        'Sandstorm': '🌪️'
+      };
+
+      // Draw icons in lower half of hex
+      const icons = placed.eventEffects.map(e => eventIcons[e.name] || '✦').join('');
+      this.ctx.fillText(icons, x, y + this.hexSize * 0.55);
       this.ctx.restore();
     }
 
@@ -480,51 +554,4 @@ export class Board {
     this.ctx.stroke();
   }
 
-  private renderSplitHex(x: number, y: number, hex: Hex, card: any) {
-    // Split the hex: upper half shows character image, lower half shows terrain
-    
-    // Draw character image in upper half
-    this.ctx.save();
-    
-    // Create clipping path for upper half of hex
-    // Hex has flat sides on left/right, points on top/bottom
-    this.ctx.beginPath();
-    
-    // Top point (angle 270 degrees = -90)
-    this.ctx.moveTo(x, y - this.hexSize);
-    
-    // Top right point (angle 330 degrees = -30)
-    const angle330 = -Math.PI / 6;
-    this.ctx.lineTo(x + this.hexSize * Math.cos(angle330), y + this.hexSize * Math.sin(angle330));
-    
-    // Right middle (angle 0)
-    this.ctx.lineTo(x + this.hexSize, y);
-    
-    // Left middle (angle 180)
-    this.ctx.lineTo(x - this.hexSize, y);
-    
-    // Top left point (angle 210 degrees = -150)
-    const angle210 = -5 * Math.PI / 6;
-    this.ctx.lineTo(x + this.hexSize * Math.cos(angle210), y + this.hexSize * Math.sin(angle210));
-    
-    // Close to top
-    this.ctx.closePath();
-    this.ctx.clip();
-    
-    // Draw character image scaled to fit and positioned to show in upper half
-    const charImage = this.cardRenderer['assetLoader'].getAsset(
-      card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder'
-    );
-    
-    if (charImage && charImage.complete) {
-      const imageSize = this.hexSize * 2.0; // Make it large enough to cover upper half
-      const imageX = x - imageSize / 2;
-      const imageY = y - imageSize; // Position so bottom of image is at center of hex
-      this.ctx.drawImage(charImage, imageX, imageY, imageSize, imageSize);
-    }
-    
-    this.ctx.restore();
-    
-    // Lower half already shows terrain from the earlier drawTerrainHex call
-  }
 }

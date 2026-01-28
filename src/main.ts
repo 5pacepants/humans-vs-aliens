@@ -43,7 +43,6 @@ function render() {
   
   // Reset transform for clearing
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#2a2a2a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);

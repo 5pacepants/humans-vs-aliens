@@ -7,7 +7,7 @@ export class CardRenderer {
   private assetLoader: CardAssetLoader;
   private offscreenCanvas: HTMLCanvasElement;
   private offscreenCtx: CanvasRenderingContext2D;
-  private readonly SUPERSAMPLING_SCALE = 2; // 2x rendering for better quality
+  private readonly SUPERSAMPLING_SCALE = 4; // 4x rendering for better quality when downscaling high-res images
 
   constructor() {
     this.assetLoader = new CardAssetLoader();
@@ -76,7 +76,7 @@ export class CardRenderer {
     this.offscreenCtx.beginPath();
     this.offscreenCtx.rect(imageX, imageY, imageW, imageH - (height * 0.164));
     this.offscreenCtx.clip();
-    this.drawCharacterImage(this.offscreenCtx, imageX, imageY, imageW, imageH, card.faction);
+    this.drawCharacterImage(this.offscreenCtx, imageX, imageY, imageW, imageH, card);
     this.offscreenCtx.restore();
     
     // Draw frame
@@ -172,7 +172,7 @@ export class CardRenderer {
     ctx.beginPath();
     ctx.rect(imageX, imageY, imageW, imageH - (height * 0.164)); // Scale with height (was -80px at 487px)
     ctx.clip();
-    this.drawCharacterImage(ctx, imageX, imageY, imageW, imageH, card.faction);
+    this.drawCharacterImage(ctx, imageX, imageY, imageW, imageH, card);
     ctx.restore();
 
     // Draw frame around image
@@ -268,8 +268,16 @@ export class CardRenderer {
     this.drawEventText(ctx, card, contentX, textY, contentWidth, textHeight);
   }
 
-  private drawCharacterImage(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, faction: 'human' | 'alien') {
-    const assetKey = faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder';
+  private drawCharacterImage(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, card: CharacterCard) {
+    // Use custom image if specified, otherwise use placeholder
+    let assetKey: string;
+    if (card.image) {
+      assetKey = card.image;
+      // Try to load the custom image if not already loaded
+      this.assetLoader.loadAsset(assetKey).catch(err => console.warn(err));
+    } else {
+      assetKey = card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder';
+    }
     const img = this.assetLoader.getAsset(assetKey);
     if (img && img.complete) {
       // Preserve original aspect ratio
@@ -454,31 +462,36 @@ export class CardRenderer {
     const textColor = '#000000';
     const effectColor = '#333333';
 
+    // Scale factor based on reference width of 300px (full-size card)
+    const scale = width / 300;
+
     // "Event" text - CENTERED
     ctx.fillStyle = textColor;
-    ctx.font = '500 15px Quicksand, sans-serif';
+    ctx.font = `500 ${Math.round(15 * scale)}px Quicksand, sans-serif`;
     const eventText = 'Event';
     const eventWidth = ctx.measureText(eventText).width;
     const eventX = x + (width - eventWidth) / 2;
-    ctx.fillText(eventText, eventX, y + 33);
+    ctx.fillText(eventText, eventX, y + 33 * scale);
 
     // Divider line between Event and effect
     ctx.strokeStyle = '#999999';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x + 10, y + 43);
-    ctx.lineTo(x + width - 10, y + 43);
+    ctx.moveTo(x + 10 * scale, y + 43 * scale);
+    ctx.lineTo(x + width - 10 * scale, y + 43 * scale);
     ctx.stroke();
 
     // Card effect description
-    ctx.font = '22px Quicksand, sans-serif';
+    const effectFontSize = Math.round(22 * scale);
+    ctx.font = `${effectFontSize}px Quicksand, sans-serif`;
     ctx.fillStyle = effectColor;
-    const wrappedText = this.wrapText(card.effect, width - 10, ctx);
-    let textY = y + 71;
+    const wrappedText = this.wrapText(card.effect, width - 10 * scale, ctx);
+    let textY = y + 71 * scale;
+    const lineHeight = Math.round(24 * scale);
     wrappedText.forEach(line => {
       if (textY < y + height) {
-        ctx.fillText(line, x + 4, textY);
-        textY += 24;
+        ctx.fillText(line, x + 4 * scale, textY);
+        textY += lineHeight;
       }
     });
   }

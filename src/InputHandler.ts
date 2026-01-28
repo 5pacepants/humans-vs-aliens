@@ -28,9 +28,23 @@ export class InputHandler {
     this.game.state.hoverDrawnEvent = false;
     this.game.state.hoverSkip = false;
     this.game.state.hoverBattleButton = false;
+    this.game.state.hoverEventHistoryButton = false;
 
     const boardWidth = this.canvas.width * 0.6;
     const uiX = boardWidth; // Right 40% starts here
+
+    // Check for event history button hover
+    if (this.game.state.phase === 'placement' && this.game.state.eventHistory.length > 0) {
+      const historyButtonWidth = 200;
+      const historyButtonHeight = 50;
+      const historyButtonX = boardWidth - historyButtonWidth - 20;
+      const historyButtonY = 80;
+
+      if (x >= historyButtonX && x < historyButtonX + historyButtonWidth &&
+          y >= historyButtonY && y < historyButtonY + historyButtonHeight) {
+        this.game.state.hoverEventHistoryButton = true;
+      }
+    }
 
     if (x > uiX) {
       // UI area (right 40%)
@@ -168,17 +182,53 @@ export class InputHandler {
     const boardWidth = this.canvas.width * 0.6;
     const uiX = boardWidth;
 
+    // Check for event history modal - if open, close on outside click
+    if (this.game.state.showEventHistory) {
+      const modalWidth = 500;
+      const eventHistoryLength = this.game.state.eventHistory.length;
+      const modalHeight = Math.min(400, 100 + eventHistoryLength * 30);
+      const modalX = (boardWidth - modalWidth) / 2;
+      const modalY = (this.canvas.height - modalHeight) / 2;
+
+      // Check if click is inside modal
+      const clickInsideModal = x >= modalX && x < modalX + modalWidth &&
+                               y >= modalY && y < modalY + modalHeight;
+
+      if (!clickInsideModal) {
+        // Click outside modal - close it
+        this.game.toggleEventHistory();
+        return;
+      } else {
+        // Click inside modal - do nothing (keep it open)
+        return;
+      }
+    }
+
     // Check for autoplace button click (testing feature)
     if (this.game.state.phase === 'placement') {
       const autoButtonWidth = 200;
       const autoButtonHeight = 50;
       const autoButtonX = boardWidth - autoButtonWidth - 20;
       const autoButtonY = 20;
-      
-      if (x >= autoButtonX && x < autoButtonX + autoButtonWidth && 
+
+      if (x >= autoButtonX && x < autoButtonX + autoButtonWidth &&
           y >= autoButtonY && y < autoButtonY + autoButtonHeight) {
         (this.game as any).autoPlaceAll();
         return;
+      }
+
+      // Check for event history button click
+      if (this.game.state.eventHistory.length > 0) {
+        const historyButtonWidth = 200;
+        const historyButtonHeight = 50;
+        const historyButtonX = boardWidth - historyButtonWidth - 20;
+        const historyButtonY = 80;
+
+        if (x >= historyButtonX && x < historyButtonX + historyButtonWidth &&
+            y >= historyButtonY && y < historyButtonY + historyButtonHeight) {
+          this.game.toggleEventHistory();
+          return;
+        }
       }
     }
 
@@ -201,24 +251,6 @@ export class InputHandler {
         if (typeof this.game.calculateScores === 'function') {
           this.game.calculateScores();
         }
-        this.game.update();
-        return;
-      }
-    }
-    // Scoring modal 'Continue' button click
-    if (this.game.state.phase === 'scoring') {
-      const modalWidth = 600 * 2.5;
-      const modalHeight = 350 * 2.2;
-      const modalX = (boardWidth - modalWidth) / 2;
-      const modalY = (this.canvas.height - modalHeight) / 2;
-      const continueBtnWidth = 260;
-      const continueBtnHeight = 60;
-      const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
-      if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
-        // Stäng resultatrutan, visa brädet och kvarvarande karaktärer
-        // Gå till "placement" så man ser brädet igen
-        this.game.state.phase = 'placement';
         this.game.update();
         return;
       }
@@ -295,10 +327,8 @@ export class InputHandler {
       
       // Click on event card to play it
       if (x >= eventCardX && x < eventCardX + eventCardWidth && y >= eventCardY && y < eventCardY + eventCardHeight && this.game.state.drawnEvent) {
-        // Play the event (currently does nothing but advances turn)
-        this.game.state.drawnEvent = undefined;
-        this.game.advanceTurn();
-        this.game.onUpdate();
+        // Play the event
+        this.game.playEvent();
       }
       // Click on skip button
       else if (x >= skipX && x < skipX + skipWidth && y >= skipHitY && y < skipHitY + skipHitHeight && this.game.state.drawnEvent) {
@@ -329,7 +359,20 @@ export class InputHandler {
         }
       }
     } else {
-      // Board area clicks - hex placement/combat
+      // Board area clicks - hex placement/combat/event targeting
+
+      // Check for event targeting mode first
+      if (this.game.state.eventTargetMode) {
+        const hex = this.getHexAt(x, y);
+        if (hex) {
+          const placed = this.game.state.placedCharacters.find((pc: any) => pc.hex.q === hex.q && pc.hex.r === hex.r);
+          if (placed) {
+            this.game.applyEventToTarget(hex.q, hex.r);
+          }
+        }
+        return;
+      }
+
       if (this.game.state.phase === 'placement') {
         if (this.game.state.selectedCard !== undefined && !hasEvent) {
           const hex = this.getHexAt(x, y);

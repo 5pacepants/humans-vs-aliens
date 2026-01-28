@@ -1,11 +1,10 @@
 // Minimal test for General Johnson ability
-import { abilities } from '../abilities/abilities';
-import { applyAbilities, computeDerivedStats } from '../abilities/AbilityEngine';
+import { computeDerivedStats } from '../AbilityEngine';
 
-const mockState = {
+const mockState: any = {
   placedCharacters: [
     {
-      card: { name: 'General Johnson', stats: { attack: 2 } },
+      card: { name: 'General Johnson', stats: { attack: 2 }, faction: 'human' },
       hex: { q: 0, r: 0 },
     },
     {

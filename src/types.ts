@@ -1,5 +1,7 @@
 // Basic types for Humans vs Aliens MVP
 
+import type { AbilityEffect } from './abilities/types';
+
 export type HexTerrain = 'grass' | 'water' | 'forest' | 'toxic' | 'mountain';
 
 // Card types for both factions
@@ -34,6 +36,7 @@ export interface CharacterCard {
   name: string; // Specific name like "General Johnson"
   type: CardType; // Card type like "Commander", "Soldier", etc.
   stats: CharacterStats;
+  image?: string; // Optional custom character image filename (without extension)
 }
 
 export interface EventCard {
@@ -42,12 +45,22 @@ export interface EventCard {
   effect: string; // description of effect
 }
 
+export interface PlacedCharacter {
+  hex: Hex;
+  card: CharacterCard;
+  modifiers?: AbilityEffect[]; // ability modifiers applied to this unit
+  derived?: CharacterStats; // computed stats after applying modifiers
+  hasBlockedFirstAttack?: boolean; // for Mutant Vor ability
+  eventDamage?: number; // damage taken from events (for display in hover info)
+  eventEffects?: EventCard[]; // events that have affected this character
+}
+
 export interface GameState {
   board: Hex[];
   humanDeck: CharacterCard[];
   alienDeck: CharacterCard[];
   eventDeck: EventCard[];
-  placedCharacters: { hex: Hex; card: CharacterCard }[];
+  placedCharacters: PlacedCharacter[];
   currentPlayer: 'human' | 'alien';
   phase: 'placement' | 'combat' | 'battleLog' | 'scoring';
     hoverContinueButton?: boolean; // hovered continue button in battle log modal
@@ -58,6 +71,7 @@ export interface GameState {
   humanEventSkips: number; // 3 for human
   alienEventSkips: number; // 3 for alien
   drawnEvent?: EventCard; // current drawn event
+  eventTargetMode?: boolean; // true when player needs to select a target for an event
   hoverPile?: 'human' | 'alien' | 'event'; // hovered pile
   hoverCardIndex?: number; // index of hovered drawn card
   hoverHex?: { q: number; r: number }; // hovered hex
@@ -71,11 +85,14 @@ export interface GameState {
   previewScaleStartTime?: number; // timestamp when preview scale animation started
   mouseX: number;
   mouseY: number;
-  combatOrder: { hex: Hex; card: CharacterCard }[]; // sorted by initiative
+  combatOrder: PlacedCharacter[]; // sorted by initiative
   currentCombatIndex: number; // index in combatOrder
-  selectedAttacker?: { hex: Hex; card: CharacterCard }; // for selecting attacker in combat
+  selectedAttacker?: PlacedCharacter; // for selecting attacker in combat
   humanScore: number;
   alienScore: number;
   winner?: 'human' | 'alien' | 'tie';
   battleLog?: string[]; // log of battle events
+  eventHistory: string[]; // log of pre-battle events (Thunderstorm, etc.)
+  showEventHistory?: boolean; // whether to show event history modal
+  hoverEventHistoryButton?: boolean; // hovered event history button
 }

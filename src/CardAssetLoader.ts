@@ -32,10 +32,17 @@ export class CardAssetLoader {
       const filename = this.getAssetFilename(assetKey);
       img.src = `/cards/${filename}`;
 
-      img.onload = () => {
-        this.assets[assetKey as keyof CardAssets] = img;
-        this.loadingPromises.delete(assetKey);
-        resolve(img);
+      img.onload = async () => {
+        try {
+          // Pre-scale image to optimal size for better quality
+          const scaled = await this.preScaleImage(img, assetKey);
+          this.assets[assetKey as keyof CardAssets] = scaled;
+          this.loadingPromises.delete(assetKey);
+          resolve(scaled);
+        } catch (err) {
+          this.loadingPromises.delete(assetKey);
+          reject(err);
+        }
       };
 
       img.onerror = () => {
@@ -46,6 +53,56 @@ export class CardAssetLoader {
 
     this.loadingPromises.set(assetKey, promise);
     return promise;
+  }
+
+  private async preScaleImage(sourceImg: HTMLImageElement, assetKey: string): Promise<HTMLImageElement> {
+    // Determine target size based on asset type
+    // Icons are drawn at ~54px, frames at ~300-400px, character images at ~300px
+    const targetSizes: Record<string, number> = {
+      healthIconHuman: 256,
+      healthIconAlien: 256,
+      costIconHuman: 256,
+      costIconAlien: 256,
+      frameHuman: 800,
+      frameAlien: 800,
+      frameEvent: 800,
+      characterPlaceholder: 800,
+      characterAlienPlaceholder: 800,
+      characterEventPlaceholder: 800,
+      skipButton: 512
+    };
+
+    // Default to 800px for unknown images (likely character images)
+    const targetSize = targetSizes[assetKey] || 800;
+
+    // If image is already close to target size, don't scale
+    if (sourceImg.width <= targetSize * 1.2) {
+      return sourceImg;
+    }
+
+    // Create canvas for high-quality downscaling
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+
+    // Calculate scaled dimensions maintaining aspect ratio
+    const scale = targetSize / Math.max(sourceImg.width, sourceImg.height);
+    canvas.width = Math.floor(sourceImg.width * scale);
+    canvas.height = Math.floor(sourceImg.height * scale);
+
+    // Use high-quality image smoothing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Draw scaled image
+    ctx.drawImage(sourceImg, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to image asynchronously
+    return new Promise((resolve, reject) => {
+      const scaledImg = new Image();
+      scaledImg.onload = () => resolve(scaledImg);
+      scaledImg.onerror = () => reject(new Error('Failed to create scaled image'));
+      scaledImg.src = canvas.toDataURL('image/png');
+    });
   }
 
   private getAssetFilename(assetKey: string): string {
@@ -62,7 +119,12 @@ export class CardAssetLoader {
       characterEventPlaceholder: 'character-event-placeholder.png',
       skipButton: 'skip-button.png'
     };
-    return filenames[assetKey] || assetKey;
+    // If not a predefined asset, assume it's a character image filename
+    if (filenames[assetKey]) {
+      return filenames[assetKey];
+    }
+    // Add .png extension if not present
+    return assetKey.endsWith('.png') ? assetKey : `${assetKey}.png`;
   }
 
   getAsset(assetKey: string): HTMLImageElement | undefined {

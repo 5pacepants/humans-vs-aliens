@@ -1,6 +1,7 @@
 // Game class to manage state and logic
 
 import type { GameState, CharacterCard, EventCard, Hex } from './types';
+import { computeDerivedStats } from './abilities/AbilityEngine';
 
 export class Game {
   state: GameState;
@@ -27,6 +28,7 @@ export class Game {
       humanScore: 0,
       alienScore: 0,
       battleLog: [],
+      eventHistory: [],
       hoverContinueButton: false,
     };
   }
@@ -55,6 +57,7 @@ export class Game {
         faction: 'human',
         name: 'Hannah Honor',
         type: 'Sniper',
+        image: 'hannah-honor',
         stats: {
           health: 1,
           damage: 1,
@@ -71,6 +74,7 @@ export class Game {
         faction: 'human',
         name: 'Nurse Tender',
         type: 'Medic',
+        image: 'nurse-tender',
         stats: {
           health: 5,
           damage: 1,
@@ -79,7 +83,7 @@ export class Game {
           initiative: 4,
           points: 0,
           rareness: 1,
-          ability: 'Adjacent humans has a 30% chance to ressurect when killed. (Applies one time per adjacent human)'
+          ability: 'Adjacent humans has a 20% chance to ressurect with one HP when killed.'
         }
       },
       {
@@ -87,6 +91,7 @@ export class Game {
         faction: 'human',
         name: 'Heavy Gunner Jack',
         type: 'Soldier',
+        image: 'heavy-gunner',
         stats: {
           health: 1,
           damage: 4,
@@ -94,7 +99,8 @@ export class Game {
           attacks: 1,
           initiative: 1,
           points: 2,
-          rareness: 2
+          rareness: 2,
+          ability: 'Has a 50% chance to deal 1 extra damage.'
         }
       }
     ];
@@ -131,6 +137,7 @@ export class Game {
         faction: 'alien',
         name: 'Pilot Frnuhuh',
         type: 'Soldier',
+        image: 'Pilot-Frnuhuh',
         stats: {
           health: 2,
           damage: 3,
@@ -155,7 +162,7 @@ export class Game {
           initiative: 1,
           points: 2,
           rareness: 4,
-          ability: 'All adjacent enemies lose 1 range due to psychic interference.'
+          ability: 'All adjacent enemies lose 1 range due to psychic interference. (To a minimum of 1 range)'
         }
       },
       {
@@ -172,7 +179,7 @@ export class Game {
           initiative: 4,
           points: 2,
           rareness: 3,
-          ability: 'Heals the first attack he receives'
+          ability: 'Blocks the first attack he receives.'
         }
       },
       {
@@ -246,6 +253,8 @@ export class Game {
       // Clear drawn cards after placement
       this.state.drawnCards = [];
       this.state.drawnCardsBackup = undefined;
+      // Recompute derived stats after placement so hover info shows correct values
+      computeDerivedStats(this.state);
       // Draw event card
       this.drawEvent();
       // Check if placement done
@@ -292,6 +301,129 @@ export class Game {
       this.advanceTurn();
       this.onUpdate();
     }
+  }
+
+  toggleEventHistory() {
+    this.state.showEventHistory = !this.state.showEventHistory;
+    this.onUpdate();
+  }
+
+  playEvent() {
+    if (!this.state.drawnEvent) return;
+
+    const event = this.state.drawnEvent;
+
+    // Identify event by name and execute effect
+    if (event.name === 'Thunderstorm') {
+      // Deal 1 damage to up to 3 random characters
+      if (this.state.placedCharacters.length > 0) {
+        const targets = [...this.state.placedCharacters];
+        const numTargets = Math.min(3, targets.length);
+
+        this.state.eventHistory.push('⚡ Thunderstorm strikes!');
+        console.log('=== THUNDERSTORM STRIKES! ===');
+
+        const hitTargets: string[] = [];
+        const deadTargets: string[] = [];
+
+        for (let i = 0; i < numTargets; i++) {
+          const randomIndex = Math.floor(Math.random() * targets.length);
+          const target = targets.splice(randomIndex, 1)[0];
+
+          // Track event damage for hover display
+          target.eventDamage = (target.eventDamage || 0) + 1;
+
+          const oldHealth = target.card.stats.health;
+          target.card.stats.health -= 1;
+          const newHealth = target.card.stats.health;
+
+          // Track which events have affected this character
+          if (!target.eventEffects) target.eventEffects = [];
+          target.eventEffects.push(event);
+
+          hitTargets.push(`${target.card.name} (${oldHealth} → ${newHealth} HP)`);
+
+          if (newHealth <= 0) {
+            deadTargets.push(target.card.name);
+          }
+
+          console.log(`⚡ ${target.card.name} hit! Health: ${oldHealth} → ${newHealth}`);
+        }
+
+        // Log hits to event history
+        this.state.eventHistory.push(`  Hits: ${hitTargets.join(', ')}`);
+
+        // Remove dead characters (health <= 0)
+        this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc.card.stats.health > 0);
+
+        // Log deaths to event history
+        if (deadTargets.length > 0) {
+          deadTargets.forEach(name => {
+            this.state.eventHistory.push(`  💀 ${name} died from Thunderstorm`);
+          });
+        }
+
+        console.log('=============================');
+
+        // Recompute derived stats so hover info shows updated health
+        computeDerivedStats(this.state);
+      }
+    }
+    // Sandstorm - player selects a target character
+    else if (event.name === 'Sandstorm') {
+      if (this.state.placedCharacters.length > 0) {
+        // Enter targeting mode - player must click a character
+        this.state.eventTargetMode = true;
+        // Reset preview scale for fresh animation
+        this.state.previewScale = undefined;
+        this.state.previewTargetScale = undefined;
+        this.state.previewScaleStartTime = undefined;
+        this.onUpdate();
+        return; // Don't clear event yet, wait for target selection
+      }
+    }
+    // Other events will be added here
+
+    // Clear event and advance turn
+    this.state.drawnEvent = undefined;
+    this.advanceTurn();
+    this.onUpdate();
+  }
+
+  applyEventToTarget(q: number, r: number) {
+    if (!this.state.eventTargetMode || !this.state.drawnEvent) return;
+
+    const target = this.state.placedCharacters.find(pc => pc.hex.q === q && pc.hex.r === r);
+    if (!target) return;
+
+    const event = this.state.drawnEvent;
+
+    if (event.name === 'Sandstorm') {
+      // Apply -1 range debuff (stored permanently on the character's base stats)
+      const oldRange = target.card.stats.range;
+      target.card.stats.range = Math.max(1, oldRange - 1);
+      const newRange = target.card.stats.range;
+
+      this.state.eventHistory.push(`🌪️ Sandstorm hits ${target.card.name}!`);
+      this.state.eventHistory.push(`  Range: ${oldRange} → ${newRange}`);
+
+      // Track which events have affected this character
+      if (!target.eventEffects) target.eventEffects = [];
+      target.eventEffects.push(event);
+
+      // Recompute derived stats
+      computeDerivedStats(this.state);
+    }
+
+    // Clear targeting mode and event, advance turn
+    this.state.eventTargetMode = false;
+    this.state.drawnEvent = undefined;
+    // Reset preview scale states
+    this.state.previewScale = undefined;
+    this.state.previewTargetScale = undefined;
+    this.state.previewScaleStartTime = undefined;
+    this.advanceTurn();
+    this.onUpdate();
   }
 
   update() {
@@ -378,13 +510,11 @@ export class Game {
     this.state.humanScore = 0;
     this.state.alienScore = 0;
     for (const pc of this.state.placedCharacters) {
-      const hexPoints = pc.hex.value || 0;
-      const cardPoints = pc.card.stats.points || 0;
-      const totalPoints = hexPoints + cardPoints;
+      const hexValue = pc.hex.value;
       if (pc.card.faction === 'human') {
-        this.state.humanScore += totalPoints;
-      } else if (pc.card.faction === 'alien') {
-        this.state.alienScore += totalPoints;
+        this.state.humanScore += hexValue;
+      } else {
+        this.state.alienScore += hexValue;
       }
     }
     if (this.state.humanScore > this.state.alienScore) {
@@ -426,19 +556,19 @@ export class Game {
     const cards: EventCard[] = [];
     // Sandstorm: 8
     for (let i = 0; i < 8; i++) {
-      cards.push({ id: `sandstorm_${i}`, name: 'Sandstorm', effect: 'Reduces visibility or movement' });
+      cards.push({ id: `sandstorm_${i}`, name: 'Sandstorm', effect: 'All characters on this tile lose 1 range (to a minimum of 1).' });
     }
     // Swap places: 6
     for (let i = 0; i < 6; i++) {
-      cards.push({ id: `swap_${i}`, name: 'Swap places', effect: 'Swap two characters' });
+      cards.push({ id: `swap_${i}`, name: 'Swap places', effect: 'Swap the place of two characters' });
     }
     // Call for a friend: 4
     for (let i = 0; i < 4; i++) {
-      cards.push({ id: `friend_${i}`, name: 'Call for a friend', effect: 'Summon an ally' });
+      cards.push({ id: `friend_${i}`, name: 'Call for a friend', effect: 'Summon a random friendly character to a hex of your choice' });
     }
     // Thunderstorm: 4
     for (let i = 0; i < 4; i++) {
-      cards.push({ id: `thunder_${i}`, name: 'Thunderstorm', effect: 'Damages units' });
+      cards.push({ id: `thunder_${i}`, name: 'Thunderstorm', effect: 'Deal 1 damage to up to 3 random characters, friend or foe.' });
     }
     // Execute: 2
     for (let i = 0; i < 2; i++) {
@@ -446,15 +576,11 @@ export class Game {
     }
     // Heavy armor: 2
     for (let i = 0; i < 2; i++) {
-      cards.push({ id: `armor_${i}`, name: 'Heavy armor', effect: 'Increase defense' });
-    }
-    // Stealth: 2
-    for (let i = 0; i < 2; i++) {
-      cards.push({ id: `stealth_${i}`, name: 'Stealth', effect: 'Become invisible' });
+      cards.push({ id: `armor_${i}`, name: 'Heavy armor', effect: 'Give a friendly character 1 block' });
     }
     // Berserk: 2
     for (let i = 0; i < 2; i++) {
-      cards.push({ id: `berserk_${i}`, name: 'Berserk', effect: 'Increase attack but reduce defense' });
+      cards.push({ id: `berserk_${i}`, name: 'Berserk', effect: 'Give a character 1 damage and -1 health' });
     }
     return this.shuffle(cards); // Shuffle event deck too
   }
@@ -488,14 +614,15 @@ export class Game {
         this.state.selectedCard = this.state.drawnCards[0];
         
         // Find a valid hex to place on
-        const availableHexes = this.state.board.filter(h => 
-          !h.isMountain && 
+        const availableHexes = this.state.board.filter(h =>
+          !h.isMountain &&
           this.canPlaceAt(h) &&
           !this.state.placedCharacters.some(pc => pc.hex.q === h.q && pc.hex.r === h.r)
         );
-        
+
         if (availableHexes.length > 0) {
-          const hex = availableHexes[0];
+          const randomIndex = Math.floor(Math.random() * availableHexes.length);
+          const hex = availableHexes[randomIndex];
           this.placeCharacter(hex.q, hex.r);
           
           // Auto-resolve any event that was drawn
@@ -511,39 +638,11 @@ export class Game {
   }
 
   startBattle() {
-        // Ta bort eventuell tidigare summering
-        const resultMarkers = ['Result:', 'Humans:', 'Aliens:', 'win!', 'Tie!'];
-        this.state.battleLog = (this.state.battleLog ?? []).filter(line => !resultMarkers.some(marker => line.includes(marker)));
-
-        // Beräkna slutpoäng och vinnare efter striden
-        let humanScore = 0;
-        let alienScore = 0;
-        for (const placed of this.state.placedCharacters) {
-          const hexPoints = placed.hex.value || 0;
-          const cardPoints = placed.card.stats.points;
-          const totalPoints = hexPoints + cardPoints;
-          if (placed.card.faction === 'human') {
-            humanScore += totalPoints;
-          } else {
-            alienScore += totalPoints;
-          }
-        }
-        let winner = '';
-        if (humanScore > alienScore) {
-          winner = 'Humans win!';
-        } else if (alienScore > humanScore) {
-          winner = 'Aliens win!';
-        } else {
-          winner = 'Tie!';
-        }
-        // Lägg till summering i battle log
-        this.state.battleLog.push('');
-        this.state.battleLog.push('Result:');
-        this.state.battleLog.push(`Humans: ${humanScore} points`);
-        this.state.battleLog.push(`Aliens: ${alienScore} points`);
-        this.state.battleLog.push(winner);
     // Initiera battleLog
     this.state.battleLog = [];
+
+    // Beräkna derived stats med abilities
+    computeDerivedStats(this.state);
 
     // Skapa namn med index om flera av samma typ finns
     const nameCount: Record<string, number> = {};
@@ -554,7 +653,7 @@ export class Game {
       nameMap.set(placed.card, `${baseName} (${nameCount[baseName]})`);
     }
 
-    // Log abilities (General Johnson)
+    // Logga abilities baserat på modifiers
     for (const placed of this.state.placedCharacters) {
       if (placed.modifiers && placed.modifiers.length > 0) {
         for (const modifier of placed.modifiers) {
@@ -581,18 +680,22 @@ export class Game {
                 this.state.battleLog.push(`${sourceName} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`);
               }
             }
-            target.card.stats.attacks += 1;
           }
         }
       }
     }
 
     // Sortera alla placerade karaktärer efter initiativ (högst först)
-    let combatOrder = [...this.state.placedCharacters].sort((a, b) => b.card.stats.initiative - a.card.stats.initiative);
+    let combatOrder = [...this.state.placedCharacters].sort((a, b) => {
+      const aInit = a.derived?.initiative ?? a.card.stats.initiative;
+      const bInit = b.derived?.initiative ?? b.card.stats.initiative;
+      return bInit - aInit;
+    });
 
     // Simulera striden: varje karaktär attackerar närmast motståndare inom range
     for (const attacker of combatOrder) {
-      const numAttacks = attacker.card.stats.attacks;
+      const attackerStats = attacker.derived ?? attacker.card.stats;
+      const numAttacks = attackerStats.attacks;
       for (let attackNum = 0; attackNum < numAttacks; attackNum++) {
         // Hitta närmaste motståndare inom range
         const enemies = this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction);
@@ -600,25 +703,70 @@ export class Game {
         let minDist = Infinity;
         for (const enemy of enemies) {
           const dist = this.hexDistance(attacker.hex, enemy.hex);
-          if (dist <= attacker.card.stats.range && dist < minDist) {
+          if (dist <= attackerStats.range && dist < minDist) {
             minDist = dist;
             closestEnemy = enemy;
           }
         }
         if (closestEnemy) {
           // Logga attack med damage och indexnamn
-          const damage = attacker.card.stats.damage ?? attacker.card.stats.attacks;
+          let damage = attackerStats.damage;
+
+          // Check for Heavy Gunner Jack ability - 50% chance for +1 damage
+          let bonusDamage = 0;
+          if (attacker.card.name === 'Heavy Gunner Jack' && Math.random() < 0.5) {
+            bonusDamage = 1;
+            damage += bonusDamage;
+          }
+
           this.state.battleLog.push(`${nameMap.get(attacker.card)} attacks ${nameMap.get(closestEnemy.card)} for ${damage} damage.`);
-          // Skada
-          closestEnemy.card.stats.health -= damage;
-          this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} loses ${damage} health.`);
-          // Dödsfall eller återstående health
-          if (closestEnemy.card.stats.health <= 0) {
-            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} dies.`);
-            // Ta bort från placerade karaktärer
-            this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc !== closestEnemy);
+
+          // Log bonus damage if it procced
+          if (bonusDamage > 0) {
+            this.state.battleLog.push(`${nameMap.get(attacker.card)} deals ${bonusDamage} bonus damage!`);
+          }
+
+          // Check for Mutant Vor block ability
+          if (closestEnemy.card.name === 'Mutant Vor' && !closestEnemy.hasBlockedFirstAttack) {
+            // Block the first attack completely
+            closestEnemy.hasBlockedFirstAttack = true;
+            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} blocks the attack!`);
           } else {
-            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} has ${closestEnemy.card.stats.health} health remaining.`);
+            // Skada
+            closestEnemy.card.stats.health -= damage;
+            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} loses ${damage} health.`);
+
+            // Dödsfall eller återstående health
+            if (closestEnemy.card.stats.health <= 0) {
+              this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} dies.`);
+
+              // Check for Nurse Tender resurrection
+              let resurrected = false;
+              if (closestEnemy.card.faction === 'human') {
+                // Find adjacent Nurse Tenders
+                const adjacentNurses = this.state.placedCharacters.filter(pc =>
+                  pc.card.name === 'Nurse Tender' &&
+                  this.hexDistance(pc.hex, closestEnemy.hex) === 1
+                );
+
+                // If there's at least one adjacent Nurse Tender, try resurrection
+                if (adjacentNurses.length > 0) {
+                  // 20% chance to resurrect
+                  if (Math.random() < 0.2) {
+                    closestEnemy.card.stats.health = 1;
+                    resurrected = true;
+                    this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} is resurrected by ${nameMap.get(adjacentNurses[0].card)} with 1 HP!`);
+                  }
+                }
+              }
+
+              // Remove from placed characters if not resurrected
+              if (!resurrected) {
+                this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc !== closestEnemy);
+              }
+            } else {
+              this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} has ${closestEnemy.card.stats.health} remaining.`);
+            }
           }
         }
         // Om inga fiender kvar, bryt attacker
@@ -628,16 +776,33 @@ export class Game {
       }
     }
 
-    // Återställ eventuella temporära attacker
+    // Beräkna slutpoäng och vinnare efter striden
+    let humanScore = 0;
+    let alienScore = 0;
     for (const placed of this.state.placedCharacters) {
-      // @ts-ignore
-      if (placed.card.stats._originalAttacks !== undefined) {
-        // @ts-ignore
-        placed.card.stats.attacks = placed.card.stats._originalAttacks;
-        // @ts-ignore
-        delete placed.card.stats._originalAttacks;
+      const hexPoints = placed.hex.value || 0;
+      const cardPoints = placed.card.stats.points;
+      const totalPoints = hexPoints + cardPoints;
+      if (placed.card.faction === 'human') {
+        humanScore += totalPoints;
+      } else {
+        alienScore += totalPoints;
       }
     }
+    let winner = '';
+    if (humanScore > alienScore) {
+      winner = 'Humans win!';
+    } else if (alienScore > humanScore) {
+      winner = 'Aliens win!';
+    } else {
+      winner = 'Tie!';
+    }
+    // Lägg till summering i battle log
+    this.state.battleLog.push('');
+    this.state.battleLog.push('Result:');
+    this.state.battleLog.push(`Humans: ${humanScore} points`);
+    this.state.battleLog.push(`Aliens: ${alienScore} points`);
+    this.state.battleLog.push(winner);
 
     // När loggen är klar, visa den för spelaren innan scoring
     this.state.phase = 'battleLog';
