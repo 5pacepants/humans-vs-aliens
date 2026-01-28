@@ -53,6 +53,7 @@ export interface PlacedCharacter {
   hasBlockedFirstAttack?: boolean; // for Mutant Vor ability
   eventDamage?: number; // damage taken from events (for display in hover info)
   eventEffects?: EventCard[]; // events that have affected this character
+  block?: number; // damage absorption from Heavy armor event
 }
 
 export interface GameState {
@@ -72,6 +73,8 @@ export interface GameState {
   alienEventSkips: number; // 3 for alien
   drawnEvent?: EventCard; // current drawn event
   eventTargetMode?: boolean; // true when player needs to select a target for an event
+  eventTargetFriendlyOnly?: boolean; // true when event can only target friendly characters
+  eventTargetEmptyAdjacent?: boolean; // true when event targets empty hex adjacent to any character
   hoverPile?: 'human' | 'alien' | 'event'; // hovered pile
   hoverCardIndex?: number; // index of hovered drawn card
   hoverHex?: { q: number; r: number }; // hovered hex

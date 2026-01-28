@@ -223,6 +223,42 @@ export class Game {
     return deck;
   }
 
+  private getRandomCharacter(faction: 'human' | 'alien'): CharacterCard {
+    // Character pools (same as deck creation)
+    const humanPool: CharacterCard[] = [
+      { id: 'h_commander', faction: 'human', name: 'General Johnson', type: 'Commander', stats: { health: 3, damage: 2, range: 2, attacks: 2, initiative: 3, points: 1, rareness: 3, ability: 'All adjacent humans has +1 attack' } },
+      { id: 'h_sniper', faction: 'human', name: 'Hannah Honor', type: 'Sniper', image: 'hannah-honor', stats: { health: 1, damage: 1, range: 4, attacks: 2, initiative: 2, points: 2, rareness: 4, ability: 'If only adjacent to one more character, gain +1 damage' } },
+      { id: 'h_medic', faction: 'human', name: 'Nurse Tender', type: 'Medic', image: 'nurse-tender', stats: { health: 5, damage: 1, range: 1, attacks: 1, initiative: 4, points: 0, rareness: 1, ability: 'Adjacent humans has a 20% chance to ressurect with one HP when killed.' } },
+      { id: 'h_soldier', faction: 'human', name: 'Heavy Gunner Jack', type: 'Soldier', image: 'heavy-gunner', stats: { health: 1, damage: 4, range: 1, attacks: 1, initiative: 1, points: 2, rareness: 2, ability: 'Has a 50% chance to deal 1 extra damage.' } }
+    ];
+
+    const alienPool: CharacterCard[] = [
+      { id: 'a_soldier', faction: 'alien', name: 'Pilot Frnuhuh', type: 'Soldier', image: 'Pilot-Frnuhuh', stats: { health: 2, damage: 3, range: 1, attacks: 2, initiative: 2, points: 1, rareness: 1, ability: 'If Frnuhuh has no adjacent aliens, he gains double the number of attacks' } },
+      { id: 'a_commander', faction: 'alien', name: "Elder K'tharr", type: 'Commander', stats: { health: 3, damage: 2, range: 1, attacks: 1, initiative: 1, points: 2, rareness: 4, ability: 'All adjacent enemies lose 1 range due to psychic interference. (To a minimum of 1 range)' } },
+      { id: 'a_medic', faction: 'alien', name: 'Mutant Vor', type: 'Medic', image: 'mutant', stats: { health: 2, damage: 3, range: 1, attacks: 1, initiative: 4, points: 2, rareness: 3, ability: 'Blocks the first attack he receives.' } },
+      { id: 'a_sniper', faction: 'alien', name: 'Warlord Vekkor', type: 'Sniper', image: 'warlord-vekkor', stats: { health: 2, damage: 3, range: 5, attacks: 1, initiative: 3, points: 0, rareness: 2, ability: 'Increases the range of adjacent friendly aliens by +1.' } }
+    ];
+
+    const pool = faction === 'human' ? humanPool : alienPool;
+
+    // Create weighted list based on rarity (lower rarity = more common)
+    const weighted: CharacterCard[] = [];
+    for (const card of pool) {
+      const weight = 5 - card.stats.rareness; // rarity 1->weight 4, rarity 4->weight 1
+      for (let i = 0; i < weight; i++) {
+        weighted.push(card);
+      }
+    }
+
+    // Pick random card and create unique copy
+    const idx = Math.floor(Math.random() * weighted.length);
+    const base = weighted[idx];
+    return {
+      ...base,
+      id: base.id + '_summon_' + Date.now()
+    };
+  }
+
   drawCards() {
     // Block drawing new cards while an event is pending
     if (this.state.drawnEvent) return;
@@ -382,6 +418,58 @@ export class Game {
         return; // Don't clear event yet, wait for target selection
       }
     }
+    // Heavy armor - player selects a friendly character to give 1 block
+    else if (event.name === 'Heavy armor') {
+      const currentFaction = this.state.currentPlayer === 'human' ? 'human' : 'alien';
+      const friendlyChars = this.state.placedCharacters.filter(pc => pc.card.faction === currentFaction);
+      if (friendlyChars.length > 0) {
+        // Enter targeting mode - player must click a friendly character
+        this.state.eventTargetMode = true;
+        this.state.eventTargetFriendlyOnly = true;
+        // Reset preview scale for fresh animation
+        this.state.previewScale = undefined;
+        this.state.previewTargetScale = undefined;
+        this.state.previewScaleStartTime = undefined;
+        this.onUpdate();
+        return; // Don't clear event yet, wait for target selection
+      }
+    }
+    // Execute - player selects any character to kill instantly
+    else if (event.name === 'Execute') {
+      if (this.state.placedCharacters.length > 0) {
+        // Enter targeting mode - player must click a character
+        this.state.eventTargetMode = true;
+        // Reset preview scale for fresh animation
+        this.state.previewScale = undefined;
+        this.state.previewTargetScale = undefined;
+        this.state.previewScaleStartTime = undefined;
+        this.onUpdate();
+        return; // Don't clear event yet, wait for target selection
+      }
+    }
+    // Call for a friend - summon random friendly character to empty adjacent hex
+    else if (event.name === 'Call for a friend') {
+      // Check if there are any empty hexes adjacent to placed characters
+      const hasValidTarget = this.state.placedCharacters.some(pc => {
+        return this.getAdjacentHexes(pc.hex.q, pc.hex.r).some(adj => {
+          const hex = this.state.board.find(h => h.q === adj.q && h.r === adj.r);
+          const occupied = this.state.placedCharacters.some(p => p.hex.q === adj.q && p.hex.r === adj.r);
+          return hex && !hex.isMountain && !occupied;
+        });
+      });
+
+      if (hasValidTarget) {
+        // Enter targeting mode - player must click an empty adjacent hex
+        this.state.eventTargetMode = true;
+        this.state.eventTargetEmptyAdjacent = true;
+        // Reset preview scale for fresh animation
+        this.state.previewScale = undefined;
+        this.state.previewTargetScale = undefined;
+        this.state.previewScaleStartTime = undefined;
+        this.onUpdate();
+        return; // Don't clear event yet, wait for target selection
+      }
+    }
     // Other events will be added here
 
     // Clear event and advance turn
@@ -393,10 +481,60 @@ export class Game {
   applyEventToTarget(q: number, r: number) {
     if (!this.state.eventTargetMode || !this.state.drawnEvent) return;
 
+    const event = this.state.drawnEvent;
+
+    // Handle empty adjacent hex targeting (Call for a friend)
+    if (this.state.eventTargetEmptyAdjacent) {
+      const hex = this.state.board.find(h => h.q === q && h.r === r);
+      const occupied = this.state.placedCharacters.some(pc => pc.hex.q === q && pc.hex.r === r);
+
+      // Must be a valid, non-mountain, empty hex
+      if (!hex || hex.isMountain || occupied) return;
+
+      // Must be adjacent to at least one character
+      const isAdjacent = this.state.placedCharacters.some(pc => {
+        const adjHexes = this.getAdjacentHexes(pc.hex.q, pc.hex.r);
+        return adjHexes.some(adj => adj.q === q && adj.r === r);
+      });
+      if (!isAdjacent) return;
+
+      if (event.name === 'Call for a friend') {
+        const currentFaction = this.state.currentPlayer === 'human' ? 'human' : 'alien';
+        const newChar = this.getRandomCharacter(currentFaction);
+
+        // Place the new character
+        this.state.placedCharacters.push({ hex, card: newChar });
+
+        this.state.eventHistory.push(`👋 Call for a friend! ${newChar.name} joins the battle!`);
+
+        // Recompute derived stats
+        computeDerivedStats(this.state);
+      }
+
+      // Clear targeting mode and event, advance turn
+      this.state.eventTargetMode = false;
+      this.state.eventTargetEmptyAdjacent = false;
+      this.state.drawnEvent = undefined;
+      this.state.previewScale = undefined;
+      this.state.previewTargetScale = undefined;
+      this.state.previewScaleStartTime = undefined;
+      this.advanceTurn();
+      this.onUpdate();
+      return;
+    }
+
+    // Handle character targeting (Sandstorm, Heavy armor, Execute)
     const target = this.state.placedCharacters.find(pc => pc.hex.q === q && pc.hex.r === r);
     if (!target) return;
 
-    const event = this.state.drawnEvent;
+    // Check friendly-only restriction
+    if (this.state.eventTargetFriendlyOnly) {
+      const currentFaction = this.state.currentPlayer === 'human' ? 'human' : 'alien';
+      if (target.card.faction !== currentFaction) {
+        // Can't target enemy with friendly-only event
+        return;
+      }
+    }
 
     if (event.name === 'Sandstorm') {
       // Apply -1 range debuff (stored permanently on the character's base stats)
@@ -413,10 +551,31 @@ export class Game {
 
       // Recompute derived stats
       computeDerivedStats(this.state);
+    } else if (event.name === 'Heavy armor') {
+      // Give target 1 block
+      const oldBlock = target.block || 0;
+      target.block = oldBlock + 1;
+
+      this.state.eventHistory.push(`🛡️ Heavy armor applied to ${target.card.name}!`);
+      this.state.eventHistory.push(`  Block: ${oldBlock} → ${target.block}`);
+
+      // Track which events have affected this character
+      if (!target.eventEffects) target.eventEffects = [];
+      target.eventEffects.push(event);
+    } else if (event.name === 'Execute') {
+      // Kill target instantly
+      this.state.eventHistory.push(`💀 Execute! ${target.card.name} is killed!`);
+
+      // Remove from placedCharacters
+      this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc !== target);
+
+      // Recompute derived stats
+      computeDerivedStats(this.state);
     }
 
     // Clear targeting mode and event, advance turn
     this.state.eventTargetMode = false;
+    this.state.eventTargetFriendlyOnly = false;
     this.state.drawnEvent = undefined;
     // Reset preview scale states
     this.state.previewScale = undefined;
@@ -461,11 +620,28 @@ export class Game {
       if (this.state.battleLog) {
         this.state.battleLog.push(`${attacker.card.name} attacks ${target.card.name}.`);
       }
-      // Deal damage
-      const damage = attacker.card.stats.attacks;
-      target.card.stats.health -= damage;
-      if (this.state.battleLog) {
-        this.state.battleLog.push(`${target.card.name} loses ${damage} health.`);
+      // Deal damage (block absorbs first)
+      let damage = attacker.card.stats.attacks;
+      if (target.block && target.block > 0) {
+        const blockedDamage = Math.min(damage, target.block);
+        target.block -= blockedDamage;
+        damage -= blockedDamage;
+        if (this.state.battleLog) {
+          this.state.battleLog.push(`${target.card.name}'s armor blocks ${blockedDamage} damage!`);
+        }
+        // Remove block from eventEffects if fully consumed
+        if (target.block <= 0) {
+          target.block = undefined;
+          if (target.eventEffects) {
+            target.eventEffects = target.eventEffects.filter(e => e.name !== 'Heavy armor');
+          }
+        }
+      }
+      if (damage > 0) {
+        target.card.stats.health -= damage;
+        if (this.state.battleLog) {
+          this.state.battleLog.push(`${target.card.name} loses ${damage} health.`);
+        }
       }
       if (target.card.stats.health <= 0) {
         if (this.state.battleLog) {
@@ -542,6 +718,18 @@ export class Game {
       Math.abs(pc.hex.r - hex.r) <= 1 &&
       Math.abs((pc.hex.q + pc.hex.r) - (hex.q + hex.r)) <= 1
     );
+  }
+
+  private getAdjacentHexes(q: number, r: number): { q: number; r: number }[] {
+    // The 6 adjacent hexes in axial coordinates
+    return [
+      { q: q + 1, r: r },
+      { q: q - 1, r: r },
+      { q: q, r: r + 1 },
+      { q: q, r: r - 1 },
+      { q: q + 1, r: r - 1 },
+      { q: q - 1, r: r + 1 }
+    ];
   }
 
   private shuffle<T>(array: T[]): T[] {

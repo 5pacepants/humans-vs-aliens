@@ -499,7 +499,9 @@ export class Board {
     // Draw event effect icons in lower half of hex if character has been affected
     if (placed && placed.eventEffects && placed.eventEffects.length > 0) {
       this.ctx.save();
-      this.ctx.font = '36px Arial';
+      // Halve icon size if 4 or more effects
+      const iconSize = placed.eventEffects.length >= 4 ? 18 : 36;
+      this.ctx.font = `${iconSize}px Arial`;
       this.ctx.textAlign = 'center';
       this.ctx.shadowColor = 'black';
       this.ctx.shadowBlur = 4;
@@ -507,7 +509,9 @@ export class Board {
       // Map event names to icons
       const eventIcons: Record<string, string> = {
         'Thunderstorm': '⚡',
-        'Sandstorm': '🌪️'
+        'Sandstorm': '🌪️',
+        'Heavy armor': '🛡️',
+        'Execute': '💀'
       };
 
       // Draw icons in lower half of hex

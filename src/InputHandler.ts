@@ -366,7 +366,8 @@ export class InputHandler {
         const hex = this.getHexAt(x, y);
         if (hex) {
           const placed = this.game.state.placedCharacters.find((pc: any) => pc.hex.q === hex.q && pc.hex.r === hex.r);
-          if (placed) {
+          // For empty adjacent targeting (Call for a friend), allow clicking empty hexes
+          if (placed || this.game.state.eventTargetEmptyAdjacent) {
             this.game.applyEventToTarget(hex.q, hex.r);
           }
         }
