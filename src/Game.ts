@@ -434,6 +434,22 @@ export class Game {
         return; // Don't clear event yet, wait for target selection
       }
     }
+    // Berserk - player selects a friendly character to give +1 damage and -1 health
+    else if (event.name === 'Berserk') {
+      const currentFaction = this.state.currentPlayer === 'human' ? 'human' : 'alien';
+      const friendlyChars = this.state.placedCharacters.filter(pc => pc.card.faction === currentFaction);
+      if (friendlyChars.length > 0) {
+        // Enter targeting mode - player must click a friendly character
+        this.state.eventTargetMode = true;
+        this.state.eventTargetFriendlyOnly = true;
+        // Reset preview scale for fresh animation
+        this.state.previewScale = undefined;
+        this.state.previewTargetScale = undefined;
+        this.state.previewScaleStartTime = undefined;
+        this.onUpdate();
+        return; // Don't clear event yet, wait for target selection
+      }
+    }
     // Execute - player selects any character to kill instantly
     else if (event.name === 'Execute') {
       if (this.state.placedCharacters.length > 0) {
@@ -470,6 +486,23 @@ export class Game {
         return; // Don't clear event yet, wait for target selection
       }
     }
+    // Swap places - select two characters to swap positions
+    else if (event.name === 'Swap places') {
+      if (this.state.placedCharacters.length >= 2) {
+        // Enter targeting mode - player must click two characters
+        this.state.eventTargetMode = true;
+        // Reset swap state
+        this.state.swapFirstTarget = undefined;
+        this.state.swapSecondTarget = undefined;
+        this.state.swapConfirmMode = false;
+        // Reset preview scale for fresh animation
+        this.state.previewScale = undefined;
+        this.state.previewTargetScale = undefined;
+        this.state.previewScaleStartTime = undefined;
+        this.onUpdate();
+        return; // Don't clear event yet, wait for target selection
+      }
+    }
     // Other events will be added here
 
     // Clear event and advance turn
@@ -482,6 +515,30 @@ export class Game {
     if (!this.state.eventTargetMode || !this.state.drawnEvent) return;
 
     const event = this.state.drawnEvent;
+
+    // Handle Swap places two-step targeting
+    if (event.name === 'Swap places') {
+      const target = this.state.placedCharacters.find(pc => pc.hex.q === q && pc.hex.r === r);
+      if (!target) return;
+
+      if (!this.state.swapFirstTarget) {
+        // First selection
+        this.state.swapFirstTarget = { q, r };
+        this.onUpdate();
+        return;
+      } else if (!this.state.swapSecondTarget) {
+        // Second selection - can't be same as first
+        if (this.state.swapFirstTarget.q === q && this.state.swapFirstTarget.r === r) {
+          return; // Can't swap with itself
+        }
+        this.state.swapSecondTarget = { q, r };
+        this.state.swapConfirmMode = true;
+        this.onUpdate();
+        return;
+      }
+      // If both are selected, do nothing (waiting for confirmation)
+      return;
+    }
 
     // Handle empty adjacent hex targeting (Call for a friend)
     if (this.state.eventTargetEmptyAdjacent) {
@@ -562,6 +619,32 @@ export class Game {
       // Track which events have affected this character
       if (!target.eventEffects) target.eventEffects = [];
       target.eventEffects.push(event);
+    } else if (event.name === 'Berserk') {
+      // Give target +1 damage and -1 health using eventModifiers
+      if (!target.eventModifiers) target.eventModifiers = [];
+      target.eventModifiers.push({ stat: 'damage', value: 1, type: 'modifier', description: 'Berserk' });
+      target.eventModifiers.push({ stat: 'health', value: -1, type: 'modifier', description: 'Berserk' });
+
+      // Recompute derived stats first to get new values
+      computeDerivedStats(this.state);
+
+      const newDamage = target.derived?.damage ?? target.card.stats.damage;
+      const newHealth = target.derived?.health ?? target.card.stats.health;
+
+      this.state.eventHistory.push(`😤 Berserk! ${target.card.name} goes into a frenzy!`);
+      this.state.eventHistory.push(`  Damage: ${target.card.stats.damage} → ${newDamage}`);
+      this.state.eventHistory.push(`  Health: ${target.card.stats.health} → ${newHealth}`);
+
+      // Check if character died from health loss
+      if (newHealth <= 0) {
+        this.state.eventHistory.push(`  💀 ${target.card.name} died from the strain!`);
+        this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc !== target);
+        computeDerivedStats(this.state);
+      } else {
+        // Track which events have affected this character
+        if (!target.eventEffects) target.eventEffects = [];
+        target.eventEffects.push(event);
+      }
     } else if (event.name === 'Execute') {
       // Kill target instantly
       this.state.eventHistory.push(`💀 Execute! ${target.card.name} is killed!`);
@@ -583,6 +666,53 @@ export class Game {
     this.state.previewScaleStartTime = undefined;
     this.advanceTurn();
     this.onUpdate();
+  }
+
+  confirmSwap() {
+    if (!this.state.swapConfirmMode || !this.state.swapFirstTarget || !this.state.swapSecondTarget) return;
+
+    const first = this.state.placedCharacters.find(
+      pc => pc.hex.q === this.state.swapFirstTarget!.q && pc.hex.r === this.state.swapFirstTarget!.r
+    );
+    const second = this.state.placedCharacters.find(
+      pc => pc.hex.q === this.state.swapSecondTarget!.q && pc.hex.r === this.state.swapSecondTarget!.r
+    );
+
+    if (first && second) {
+      // Swap the hex references
+      const tempHex = first.hex;
+      first.hex = second.hex;
+      second.hex = tempHex;
+
+      this.state.eventHistory.push(`🔄 Swap places! ${first.card.name} and ${second.card.name} switched positions!`);
+
+      // Recompute derived stats
+      computeDerivedStats(this.state);
+    }
+
+    // Clear all swap and event state
+    this.clearSwapState();
+    this.state.eventTargetMode = false;
+    this.state.drawnEvent = undefined;
+    this.state.previewScale = undefined;
+    this.state.previewTargetScale = undefined;
+    this.state.previewScaleStartTime = undefined;
+    this.advanceTurn();
+    this.onUpdate();
+  }
+
+  cancelSwap() {
+    // Clear swap state but keep the event card (return it to draw position)
+    this.clearSwapState();
+    this.state.eventTargetMode = false;
+    // Don't clear drawnEvent - the card stays visible
+    this.onUpdate();
+  }
+
+  private clearSwapState() {
+    this.state.swapFirstTarget = undefined;
+    this.state.swapSecondTarget = undefined;
+    this.state.swapConfirmMode = false;
   }
 
   update() {
@@ -768,7 +898,7 @@ export class Game {
     }
     // Berserk: 2
     for (let i = 0; i < 2; i++) {
-      cards.push({ id: `berserk_${i}`, name: 'Berserk', effect: 'Give a character 1 damage and -1 health' });
+      cards.push({ id: `berserk_${i}`, name: 'Berserk', effect: 'Give a friendly character +1 damage and -1 health' });
     }
     return this.shuffle(cards); // Shuffle event deck too
   }

@@ -55,7 +55,7 @@ export function applyTerrainEffects(state: any, trigger: AbilityTrigger) {
 
 // Example: recompute derived stats
 export function computeDerivedStats(state: any) {
-  // Reset modifiers
+  // Reset modifiers (but preserve eventModifiers)
   for (const unit of state.placedCharacters) {
     unit.modifiers = [];
   }
@@ -67,15 +67,19 @@ export function computeDerivedStats(state: any) {
   for (const unit of state.placedCharacters) {
     unit.derived = { ...unit.card.stats };
 
+    // Merge eventModifiers into modifiers for display purposes
+    const allModifiers = [...(unit.modifiers || []), ...(unit.eventModifiers || [])];
+    unit.modifiers = allModifiers;
+
     // First: apply all additive modifiers
-    for (const mod of unit.modifiers) {
+    for (const mod of allModifiers) {
       if (mod.type === 'modifier' && mod.stat && typeof mod.value === 'number') {
         unit.derived[mod.stat] = (unit.derived[mod.stat] || 0) + mod.value;
       }
     }
 
     // Second: apply all multiplicative modifiers
-    for (const mod of unit.modifiers) {
+    for (const mod of allModifiers) {
       if (mod.type === 'multiplier' && mod.stat && typeof mod.value === 'number') {
         unit.derived[mod.stat] = (unit.derived[mod.stat] || 0) * mod.value;
       }

@@ -61,6 +61,22 @@ export class InputHandler {
         }
       }
 
+      // Swap confirm button hover
+      if (this.game.state.swapConfirmMode) {
+        const swapButtonWidth = 300;
+        const swapButtonHeight = 70;
+        const swapButtonX = (boardWidth - swapButtonWidth) / 2;
+        const swapButtonY = this.canvas.height / 2 - swapButtonHeight / 2;
+
+        if (x >= swapButtonX && x < swapButtonX + swapButtonWidth && y >= swapButtonY && y < swapButtonY + swapButtonHeight) {
+          this.game.state.hoverSwapConfirm = true;
+        } else {
+          this.game.state.hoverSwapConfirm = false;
+        }
+      } else {
+        this.game.state.hoverSwapConfirm = false;
+      }
+
         // Battle log 'Continue' button hover
         if (this.game.state.phase === 'battleLog') {
           const modalWidth = 600 * 2.5;
@@ -200,6 +216,20 @@ export class InputHandler {
         return;
       } else {
         // Click inside modal - do nothing (keep it open)
+        return;
+      }
+    }
+
+    // Check for swap confirm button click
+    if (this.game.state.swapConfirmMode) {
+      const buttonWidth = 300;
+      const buttonHeight = 70;
+      const buttonX = (boardWidth - buttonWidth) / 2;
+      const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+
+      if (x >= buttonX && x < buttonX + buttonWidth &&
+          y >= buttonY && y < buttonY + buttonHeight) {
+        this.game.confirmSwap();
         return;
       }
     }
@@ -414,7 +444,13 @@ export class InputHandler {
 
   private handleRightClick(event: MouseEvent) {
     event.preventDefault(); // Prevent context menu from showing
-    
+
+    // Cancel swap if in swap mode
+    if (this.game.state.swapFirstTarget || this.game.state.swapSecondTarget || this.game.state.swapConfirmMode) {
+      this.game.cancelSwap();
+      return;
+    }
+
     // Deselect any selected card and restore all drawn cards
     if (this.game.state.selectedCard !== undefined) {
       this.game.state.selectedCard = undefined;

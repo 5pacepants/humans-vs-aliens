@@ -518,8 +518,8 @@ export class GameUI {
       this.cardRenderer.renderFrameAndCharacter(this.ctx, gameState.selectedCard, previewX, previewY, previewWidth, previewHeight);
     }
 
-    // Draw event card following mouse when in event target mode
-    if (gameState.eventTargetMode && gameState.drawnEvent) {
+    // Draw event card following mouse when in event target mode (but not during swap confirm)
+    if (gameState.eventTargetMode && gameState.drawnEvent && !gameState.swapConfirmMode) {
       const boardWidth = this.canvas.width * 0.6;
       const isOverBoard = gameState.mouseX < boardWidth;
 
@@ -640,6 +640,47 @@ export class GameUI {
       this.ctx.shadowBlur = 0;
       this.ctx.shadowOffsetX = 0;
       this.ctx.shadowOffsetY = 0;
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'alphabetic';
+    }
+
+    // Swap confirmation button
+    if (gameState.swapConfirmMode) {
+      const boardWidth = this.canvas.width * 0.6;
+      const buttonWidth = 300;
+      const buttonHeight = 70;
+      const buttonX = (boardWidth - buttonWidth) / 2;
+      const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+
+      // Draw button background with orange neon style
+      this.ctx.save();
+      this.ctx.shadowColor = '#FF6600';
+      this.ctx.shadowBlur = 20;
+      this.ctx.fillStyle = gameState.hoverSwapConfirm ? '#FF8800' : '#FF6600';
+      this.ctx.strokeStyle = '#FFAA00';
+      this.ctx.lineWidth = 3;
+      this.roundedRect(this.ctx, buttonX, buttonY, buttonWidth, buttonHeight, 10);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      // Draw button text
+      this.ctx.fillStyle = '#FFFFFF';
+      this.ctx.font = 'bold 28px "Smooch Sans", sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.shadowBlur = 5;
+      this.ctx.fillText('Swap places?', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+
+      // Instruction text below
+      this.ctx.font = '16px "Quicksand", sans-serif';
+      this.ctx.fillStyle = '#CCCCCC';
+      this.ctx.fillText('Click to confirm, right-click to cancel', buttonX + buttonWidth / 2, buttonY + buttonHeight + 25);
+
+      // Reset
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
     }

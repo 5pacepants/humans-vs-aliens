@@ -304,6 +304,24 @@ export class Board {
           this.ctx.strokeStyle = 'white';
           this.ctx.lineWidth = 2;
         }
+        // Highlight swap targets with orange neon glow
+        const isSwapFirst = this.gameState.swapFirstTarget &&
+          this.gameState.swapFirstTarget.q === hex.q && this.gameState.swapFirstTarget.r === hex.r;
+        const isSwapSecond = this.gameState.swapSecondTarget &&
+          this.gameState.swapSecondTarget.q === hex.q && this.gameState.swapSecondTarget.r === hex.r;
+        if (isSwapFirst || isSwapSecond) {
+          // Orange neon glow effect
+          this.ctx.save();
+          this.ctx.shadowColor = '#FF6600';
+          this.ctx.shadowBlur = 20;
+          this.ctx.strokeStyle = '#FF9900';
+          this.ctx.lineWidth = 5;
+          this.drawHexOutline(x, y);
+          // Draw again for stronger glow
+          this.ctx.shadowBlur = 10;
+          this.drawHexOutline(x, y);
+          this.ctx.restore();
+        }
       } else if (this.gameState.selectedCard && this.gameState.hoverHex && this.gameState.hoverHex.q === hex.q && this.gameState.hoverHex.r === hex.r) {
         // Preview placement: outline in faction color
         const color = this.gameState.selectedCard.faction === 'human' ? 'blue' : 'red';
@@ -511,7 +529,8 @@ export class Board {
         'Thunderstorm': '⚡',
         'Sandstorm': '🌪️',
         'Heavy armor': '🛡️',
-        'Execute': '💀'
+        'Execute': '💀',
+        'Berserk': '😤'
       };
 
       // Draw icons in lower half of hex

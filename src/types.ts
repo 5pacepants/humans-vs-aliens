@@ -48,7 +48,8 @@ export interface EventCard {
 export interface PlacedCharacter {
   hex: Hex;
   card: CharacterCard;
-  modifiers?: AbilityEffect[]; // ability modifiers applied to this unit
+  modifiers?: AbilityEffect[]; // ability modifiers applied to this unit (recomputed each time)
+  eventModifiers?: AbilityEffect[]; // persistent modifiers from events (not reset)
   derived?: CharacterStats; // computed stats after applying modifiers
   hasBlockedFirstAttack?: boolean; // for Mutant Vor ability
   eventDamage?: number; // damage taken from events (for display in hover info)
@@ -75,6 +76,10 @@ export interface GameState {
   eventTargetMode?: boolean; // true when player needs to select a target for an event
   eventTargetFriendlyOnly?: boolean; // true when event can only target friendly characters
   eventTargetEmptyAdjacent?: boolean; // true when event targets empty hex adjacent to any character
+  swapFirstTarget?: { q: number; r: number }; // first character selected for swap
+  swapSecondTarget?: { q: number; r: number }; // second character selected for swap
+  swapConfirmMode?: boolean; // true when waiting for swap confirmation
+  hoverSwapConfirm?: boolean; // true when hovering over swap confirm button
   hoverPile?: 'human' | 'alien' | 'event'; // hovered pile
   hoverCardIndex?: number; // index of hovered drawn card
   hoverHex?: { q: number; r: number }; // hovered hex
