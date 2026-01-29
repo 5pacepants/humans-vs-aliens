@@ -1,0 +1,6 @@
+Terrain,Count on Board,Effect,Notes
+grass,Variable,Neutral terrain without effects,Most common terrain - fills remaining hexes
+water,2,+1 range to characters on this tile,Good for ranged units
+forest,2,+1 damage to characters on this tile,Good for damage dealers
+toxic,2,-1 health to characters on this tile,Dangerous but can be strategic
+mountain,3,Impassable terrain,Blocks movement and line of sight

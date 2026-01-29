@@ -1,0 +1,8 @@
+ID,Name,Count in Deck,Effect,Target Type,Notes
+sandstorm,Sandstorm,2,All characters on this tile lose 1 range (to a minimum of 1),Single hex,Terrain effect - persists on hex
+swap,Swap places,2,Swap the place of two characters,Two characters,Select two characters to swap positions
+friend,Call for a friend,2,Summon a random friendly character to a hex of your choice,Empty adjacent hex,Spawns copy of random friendly unit
+thunder,Thunderstorm,2,Deal 1 damage to up to 3 random characters friend or foe,Random (no target),Affects both teams randomly
+execute,Execute,2,Kill a unit,Single character,Instant kill - very powerful
+armor,Heavy armor,2,Give a friendly character 1 block,Friendly character,Blocks next incoming attack
+berserk,Berserk,2,Give a friendly character +1 damage and -1 health,Friendly character,Trade health for damage

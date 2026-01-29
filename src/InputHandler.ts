@@ -37,12 +37,7 @@ export class InputHandler {
       return;
     }
 
-    // Block input during AI turn
-    if (this.game.state.aiThinking) {
-      return;
-    }
-
-    // Reset hover
+    // Reset hover states
     const previousHoverIndex = this.game.state.hoverCardIndex;
     this.game.state.hoverPile = undefined;
     this.game.state.hoverCardIndex = undefined;
@@ -51,6 +46,12 @@ export class InputHandler {
     this.game.state.hoverSkip = false;
     this.game.state.hoverBattleButton = false;
     this.game.state.hoverEventHistoryButton = false;
+
+    // Block further input during AI turn (but keep hover states cleared)
+    if (this.game.state.aiThinking) {
+      this.game.update();
+      return;
+    }
 
     const boardWidth = this.getCSSWidth() * 0.6;
     const uiX = boardWidth; // Right 40% starts here

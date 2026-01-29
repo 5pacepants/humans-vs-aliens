@@ -1,0 +1,4 @@
+Description,Value Range,Notes
+Central hexes (distance <= 2 from center),1-5 points,Random value assigned at game start
+Outer hexes (distance > 2 from center),0 points,No point value
+Mountains,0 points,Value removed when hex becomes mountain

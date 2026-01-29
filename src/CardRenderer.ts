@@ -87,21 +87,24 @@ export class CardRenderer {
   }
 
   private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16) {
+    // Scale factor based on reference width of 300px
+    const scale = width / 300;
+
     // Card colors and dimensions based on faction
     const isHuman = card.faction === 'human';
     const borderColor = isHuman ? '#2a3a4d' : '#5a4570'; // Blue border for human, dark purple for alien
     const bgColor = isHuman ? '#DED9CE' : '#233628'; // Darker green background for alien
     const darkBgColor = isHuman ? '#bab29f' : '#141f18'; // Darker green for stats/faction areas on alien
-    const borderWidth = 4;
-    const cardPadding = 14;
-    const imageAreaPadding = 8;
-    const cornerRadius = 12; // Rounded corners like Magic cards
+    const borderWidth = 4 * scale;
+    const cardPadding = 14 * scale;
+    const imageAreaPadding = 8 * scale;
+    const cornerRadius = 12 * scale; // Rounded corners like Magic cards
 
     // Draw thin outline around entire card with rounded corners first
     const outlineColor = isHuman ? '#2a3a4d' : '#5a4570'; // Dark purple for alien
     ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = 10;
-    this.roundedRect(ctx, x + 5, y + 5, width - 10, height - 10, cornerRadius);
+    ctx.lineWidth = 10 * scale;
+    this.roundedRect(ctx, x + 5 * scale, y + 5 * scale, width - 10 * scale, height - 10 * scale, cornerRadius);
     ctx.stroke();
 
     // Draw outer border with rounded corners
@@ -116,7 +119,7 @@ export class CardRenderer {
 
     // Draw darker background section for health/strength icons at top
     ctx.fillStyle = darkBgColor;
-    const iconBgHeight = 55;
+    const iconBgHeight = 55 * scale;
     ctx.save();
     ctx.beginPath();
     // Clip to rounded top section
@@ -127,23 +130,23 @@ export class CardRenderer {
 
     // Draw faction text in the dark top section
     ctx.fillStyle = isHuman ? '#000000' : '#ffffff';
-    ctx.font = '500 15px Quicksand, sans-serif';
+    ctx.font = `500 ${Math.round(15 * scale)}px Quicksand, sans-serif`;
     const factionText = card.faction.charAt(0).toUpperCase() + card.faction.slice(1); // Capitalize
     const factionWidth = ctx.measureText(factionText).width;
     const factionX = x + (width - factionWidth) / 2;
-    const factionY = y + borderWidth + iconBgHeight - 5; // 5px from bottom of dark section
+    const factionY = y + borderWidth + iconBgHeight - 5 * scale; // 5px from bottom of dark section
     ctx.fillText(factionText, factionX, factionY);
 
     // Draw darker background section for stats in lower left corner
     // Make it wider for preview cards (when abilityFontSize is 13)
     const isPreview = abilityFontSize === 13;
-    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 28 + (isPreview ? 18 : 0);
-    const statsBgHeight = 85; // Increased to fit Init stat
-    const statsBgX = x + borderWidth + 5;
+    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 28 * scale + (isPreview ? 18 * scale : 0);
+    const statsBgHeight = 85 * scale; // Increased to fit Init stat
+    const statsBgX = x + borderWidth + 5 * scale;
     // Moved up 15px to accommodate additional stat line
-    const statsBgY = y + height - borderWidth - cardPadding - 73;
+    const statsBgY = y + height - borderWidth - cardPadding - 73 * scale;
     ctx.fillStyle = darkBgColor;
-    this.roundedRect(ctx, statsBgX, statsBgY, statsBgWidth, statsBgHeight, 6);
+    this.roundedRect(ctx, statsBgX, statsBgY, statsBgWidth, statsBgHeight, 6 * scale);
     ctx.fill();
 
     // Content area (inside border and padding)
@@ -155,7 +158,7 @@ export class CardRenderer {
     // Draw character image area (about 60% height)
     const imageHeight = contentHeight * 0.6;
     const baseImageW = contentWidth - imageAreaPadding * 2;
-    const baseImageH = imageHeight - 14;
+    const baseImageH = imageHeight - 14 * scale;
     // Make frame 15% larger
     const imageW = baseImageW * 1.15;
     const imageH = baseImageH * 1.15;
@@ -179,29 +182,32 @@ export class CardRenderer {
     this.drawFrame(ctx, imageX, frameY, imageW, frameH, card.faction);
 
     // Draw icons at top (pips instead of numbers) - scale positions with size
-    this.drawHealthIcons(ctx, contentX - (width * 0.053), contentY - (height * 0.039), card.stats.health, card.faction);
-    this.drawAttackIcons(ctx, contentX + contentWidth + (width * 0.053), contentY - (height * 0.039), card.stats.attacks, card.faction);
+    this.drawHealthIcons(ctx, contentX - (width * 0.053), contentY - (height * 0.039), card.stats.health, card.faction, scale);
+    this.drawAttackIcons(ctx, contentX + contentWidth + (width * 0.053), contentY - (height * 0.039), card.stats.attacks, card.faction, scale);
 
     // Draw text info at bottom
-    const textY = imageY + imageHeight - 42; // Moved up 50 pixels from original position
-    const textHeight = contentHeight - imageHeight - 16;
-    this.drawCardText(ctx, card, contentX, textY, contentWidth, textHeight, abilityFontSize);
+    const textY = imageY + imageHeight - 42 * scale; // Moved up 50 pixels from original position
+    const textHeight = contentHeight - imageHeight - 16 * scale;
+    this.drawCardText(ctx, card, contentX, textY, contentWidth, textHeight, abilityFontSize, scale);
   }
 
   private renderEventCardToContext(ctx: CanvasRenderingContext2D, card: EventCard, x: number, y: number, width: number, height: number) {
+    // Scale factor based on reference width of 300px
+    const scale = width / 300;
+
     // Event card colors - red/orange theme
     const borderColor = '#8B1A1A'; // Mörkröd border
     const bgColor = '#F0D4A8'; // Ljusare matt orange bakgrund med låg saturation
     const darkBgColor = '#E8A04D'; // Gul/orange för header
-    const borderWidth = 4;
-    const cardPadding = 14;
-    const imageAreaPadding = 8;
-    const cornerRadius = 12;
+    const borderWidth = 4 * scale;
+    const cardPadding = 14 * scale;
+    const imageAreaPadding = 8 * scale;
+    const cornerRadius = 12 * scale;
 
     // Draw thin outline around entire card with rounded corners
     ctx.strokeStyle = '#8B1A1A';
-    ctx.lineWidth = 10;
-    this.roundedRect(ctx, x + 5, y + 5, width - 10, height - 10, cornerRadius);
+    ctx.lineWidth = 10 * scale;
+    this.roundedRect(ctx, x + 5 * scale, y + 5 * scale, width - 10 * scale, height - 10 * scale, cornerRadius);
     ctx.stroke();
 
     // Draw outer border with rounded corners
@@ -216,7 +222,7 @@ export class CardRenderer {
 
     // Draw darker background section for header at top
     ctx.fillStyle = darkBgColor;
-    const headerBgHeight = 55;
+    const headerBgHeight = 55 * scale;
     ctx.save();
     ctx.beginPath();
     this.roundedRect(ctx, x + borderWidth, y + borderWidth, width - borderWidth * 2, headerBgHeight, cornerRadius - borderWidth);
@@ -226,10 +232,10 @@ export class CardRenderer {
 
     // Draw card name in the dark top section
     ctx.fillStyle = '#000000';
-    ctx.font = '700 32px "Smooch Sans", sans-serif';
+    ctx.font = `700 ${Math.round(32 * scale)}px "Smooch Sans", sans-serif`;
     const nameWidth = ctx.measureText(card.name).width;
     const nameX = x + (width - nameWidth) / 2;
-    const nameY = y + borderWidth + headerBgHeight - 10;
+    const nameY = y + borderWidth + headerBgHeight - 10 * scale;
     ctx.fillText(card.name, nameX, nameY);
 
     // Content area
@@ -241,15 +247,15 @@ export class CardRenderer {
     // Draw event image area (about 60% height, same as character cards)
     const imageHeight = contentHeight * 0.6;
     const baseImageW = contentWidth - imageAreaPadding * 2;
-    const baseImageH = imageHeight - 14;
+    const baseImageH = imageHeight - 14 * scale;
     const imageW = baseImageW * 1.15;
     const imageH = baseImageH * 1.15;
     const imageX = contentX + imageAreaPadding - (imageW - baseImageW) / 2;
-    const imageY = contentY - (height * 0.02) + 15; // Flyttad ner 15px
+    const imageY = contentY - (height * 0.02) + 15 * scale; // Flyttad ner 15px
 
     // Frame dimensions - 35px ner från toppen, 40px upp från botten
-    const frameY = imageY + 35;
-    const frameH = imageH - 75;
+    const frameY = imageY + 35 * scale;
+    const frameH = imageH - 75 * scale;
 
     // Clip to frame area so image cannot overflow
     ctx.save();
@@ -263,8 +269,8 @@ export class CardRenderer {
     this.drawEventFrame(ctx, imageX, frameY, imageW, frameH);
 
     // Draw text info at bottom
-    const textY = imageY + imageHeight - 42;
-    const textHeight = contentHeight - imageHeight - 16;
+    const textY = imageY + imageHeight - 42 * scale;
+    const textHeight = contentHeight - imageHeight - 16 * scale;
     this.drawEventText(ctx, card, contentX, textY, contentWidth, textHeight);
   }
 
@@ -360,11 +366,11 @@ export class CardRenderer {
     }
   }
 
-  private drawHealthIcons(ctx: CanvasRenderingContext2D, x: number, y: number, health: number, faction: 'human' | 'alien') {
+  private drawHealthIcons(ctx: CanvasRenderingContext2D, x: number, y: number, health: number, faction: 'human' | 'alien', scale: number = 1) {
     const iconKey = faction === 'human' ? 'healthIconHuman' : 'healthIconAlien';
     const icon = this.assetLoader.getAsset(iconKey);
-    const iconSize = 44; // 70% of 54, then +15%
-    const gap = -20; // 70% of -24, then +15%
+    const iconSize = 44 * scale; // 70% of 54, then +15%
+    const gap = -20 * scale; // 70% of -24, then +15%
     const count = Math.max(0, Math.min(health, 6));
     for (let i = 0; i < count; i++) {
       const drawX = x + i * (iconSize + gap);
@@ -379,11 +385,11 @@ export class CardRenderer {
     }
   }
 
-  private drawAttackIcons(ctx: CanvasRenderingContext2D, rightX: number, y: number, attacks: number, faction: 'human' | 'alien') {
+  private drawAttackIcons(ctx: CanvasRenderingContext2D, rightX: number, y: number, attacks: number, faction: 'human' | 'alien', scale: number = 1) {
     const iconKey = faction === 'human' ? 'costIconHuman' : 'costIconAlien';
     const icon = this.assetLoader.getAsset(iconKey);
-    const iconSize = 44; // 70% of 54, then +15%
-    const gap = -20; // 70% of -24, then +15%
+    const iconSize = 44 * scale; // 70% of 54, then +15%
+    const gap = -20 * scale; // 70% of -24, then +15%
     const count = Math.max(0, Math.min(attacks, 6));
     const totalWidth = count * iconSize + Math.max(0, count - 1) * gap;
     const startX = rightX - totalWidth;
@@ -400,49 +406,50 @@ export class CardRenderer {
     }
   }
 
-  private drawCardText(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16) {
+  private drawCardText(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16, scale: number = 1) {
     // Offset for alien cards to account for larger frame
     const isHuman = card.faction === 'human';
-    const offset = isHuman ? 0 : 5;
+    const offset = isHuman ? 0 : 5 * scale;
     const textColor = isHuman ? '#000000' : '#ffffff'; // White for alien
     const typeColor = isHuman ? '#555555' : '#dddddd'; // Light grey for alien
     const abilityColor = isHuman ? '#333333' : '#eeeeee'; // Very light grey for alien
 
     // Card name (specific name like "General Johnson") - CENTERED
     ctx.fillStyle = textColor;
-    ctx.font = '700 32px "Smooch Sans", sans-serif';
+    ctx.font = `700 ${Math.round(32 * scale)}px "Smooch Sans", sans-serif`;
     const nameWidth = ctx.measureText(card.name).width;
     const nameX = x + (width - nameWidth) / 2;
-    ctx.fillText(card.name, nameX, y + 18 + offset);
+    ctx.fillText(card.name, nameX, y + 18 * scale + offset);
 
     // Divider line between name and type
     ctx.strokeStyle = '#999999';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * scale;
     ctx.beginPath();
-    ctx.moveTo(x + 10, y + 28 + offset);
-    ctx.lineTo(x + width - 10, y + 28 + offset);
+    ctx.moveTo(x + 10 * scale, y + 28 * scale + offset);
+    ctx.lineTo(x + width - 10 * scale, y + 28 * scale + offset);
     ctx.stroke();
 
     // Card type (like "Commander", "Soldier", etc.) - CENTERED
-    ctx.font = '500 15px Quicksand, sans-serif';
+    ctx.font = `500 ${Math.round(15 * scale)}px Quicksand, sans-serif`;
     ctx.fillStyle = typeColor;
     const typeWidth = ctx.measureText(card.type).width;
     const typeX = x + (width - typeWidth) / 2;
-    ctx.fillText(card.type, typeX, y + 46 + offset);
+    ctx.fillText(card.type, typeX, y + 46 * scale + offset);
 
-    // Card description/ability
-    ctx.font = `${abilityFontSize}px Quicksand, sans-serif`;
+    // Card description/ability - scale the font size parameter too
+    const scaledAbilityFontSize = Math.round(abilityFontSize * scale);
+    ctx.font = `${scaledAbilityFontSize}px Quicksand, sans-serif`;
     ctx.fillStyle = abilityColor;
     const ability = card.stats.ability || 'No ability';
-    const wrappedText = this.wrapText(ability, width - 10, ctx);
-    let textY = y + 72 + offset;
+    const wrappedText = this.wrapText(ability, width - 10 * scale, ctx);
+    let textY = y + 72 * scale + offset;
     wrappedText.forEach(line => {
-      ctx.fillText(line, x + 4, textY);
-      textY += 22;
+      ctx.fillText(line, x + 4 * scale, textY);
+      textY += 22 * scale;
     });
 
     // Stats lines
-    ctx.font = '15px Quicksand, sans-serif';
+    ctx.font = `${Math.round(15 * scale)}px Quicksand, sans-serif`;
     ctx.fillStyle = isHuman ? '#000000' : '#ffffff';
     const statsLines = [
       `Range: ${card.stats.range}`,
@@ -451,10 +458,10 @@ export class CardRenderer {
       `Init: ${card.stats.initiative}`,
       `Points: ${card.stats.points}`
     ];
-    let statsY = y + height + 14; // Moved up 15px to fit Init stat
+    let statsY = y + height + 14 * scale; // Moved up 15px to fit Init stat
     statsLines.forEach(line => {
-      ctx.fillText(line, x + 4, statsY);
-      statsY += 14;
+      ctx.fillText(line, x + 4 * scale, statsY);
+      statsY += 14 * scale;
     });
   }
 
