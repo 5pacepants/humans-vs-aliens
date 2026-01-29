@@ -302,10 +302,17 @@ export class GameUI {
       const eventCardX = deckX + (deckWidth - eventCardWidth) / 2; // Center it
       const eventCardY = deckStartY;
 
-      // Apply shadow
-      const isHovered = gameState.hoverDrawnEvent;
-      this.ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-      this.ctx.shadowBlur = 25;
+      // Apply shadow - neon cyan for AI highlight, white otherwise
+      // Disable hover effect during AI turn
+      const isHovered = gameState.hoverDrawnEvent && !gameState.aiThinking;
+      const isAIHighlightPlay = gameState.aiHighlightedAction === 'play';
+      if (isAIHighlightPlay) {
+        this.ctx.shadowColor = '#00FFFF';
+        this.ctx.shadowBlur = 50;
+      } else {
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.shadowBlur = 25;
+      }
       this.ctx.shadowOffsetX = 0;
       this.ctx.shadowOffsetY = 0;
       
@@ -342,7 +349,17 @@ export class GameUI {
       const scaledY = eventCardY - (scaledHeight - eventCardHeight) / 2;
       
       this.cardRenderer.renderCard(this.ctx, gameState.drawnEvent, scaledX, scaledY, scaledWidth, scaledHeight);
-      
+
+      // Draw neon border if AI is highlighting for play
+      if (isAIHighlightPlay) {
+        this.ctx.strokeStyle = '#00FFFF';
+        this.ctx.lineWidth = 3 * scale;
+        this.ctx.shadowColor = '#00FFFF';
+        this.ctx.shadowBlur = 40;
+        this.roundedRect(this.ctx, scaledX - 2, scaledY - 2, scaledWidth + 4, scaledHeight + 4, 8 * scale);
+        this.ctx.stroke();
+      }
+
       // Reset shadow
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
@@ -357,21 +374,41 @@ export class GameUI {
         const skipHeight = 180 * scale;
         const skipWidth = skipHeight * originalAspect;
         const skipX = deckX + (deckWidth - skipWidth) / 2; // Center it
-        
-        // Optional hover effect
-        const hoverScale = gameState.hoverSkip ? 1.05 : 1.0;
+
+        // Optional hover effect (disabled during AI turn)
+        const hoverScale = (gameState.hoverSkip && !gameState.aiThinking) ? 1.05 : 1.0;
         const scaledSkipWidth = skipWidth * hoverScale;
         const scaledSkipHeight = skipHeight * hoverScale;
         const scaledSkipX = skipX - (scaledSkipWidth - skipWidth) / 2;
         const scaledSkipY = skipY - (scaledSkipHeight - skipHeight) / 2;
-        
-        // Apply black shadow - much darker and more visible
-        this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-        this.ctx.shadowBlur = 40 * scale;
-        this.ctx.shadowOffsetX = 8 * scale;
-        this.ctx.shadowOffsetY = 8 * scale;
+
+        // Check if AI is highlighting skip
+        const isAIHighlightSkip = gameState.aiHighlightedAction === 'skip';
+
+        // Apply shadow - neon cyan for AI highlight, black otherwise
+        if (isAIHighlightSkip) {
+          this.ctx.shadowColor = '#00FFFF';
+          this.ctx.shadowBlur = 50;
+          this.ctx.shadowOffsetX = 0;
+          this.ctx.shadowOffsetY = 0;
+        } else {
+          this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+          this.ctx.shadowBlur = 40 * scale;
+          this.ctx.shadowOffsetX = 8 * scale;
+          this.ctx.shadowOffsetY = 8 * scale;
+        }
 
         this.ctx.drawImage(skipButton, scaledSkipX, scaledSkipY, scaledSkipWidth, scaledSkipHeight);
+
+        // Draw neon border if AI is highlighting skip
+        if (isAIHighlightSkip) {
+          this.ctx.strokeStyle = '#00FFFF';
+          this.ctx.lineWidth = 3 * scale;
+          this.ctx.shadowColor = '#00FFFF';
+          this.ctx.shadowBlur = 40;
+          this.roundedRect(this.ctx, scaledSkipX - 2, scaledSkipY - 2, scaledSkipWidth + 4, scaledSkipHeight + 4, 10 * scale);
+          this.ctx.stroke();
+        }
 
         // Reset shadow
         this.ctx.shadowColor = 'transparent';
@@ -435,8 +472,10 @@ export class GameUI {
 
       // First pass: render all non-hovered cards
       for (let i = 0; i < gameState.drawnCards.length; i++) {
-        if (gameState.hoverCardIndex === i) continue; // Skip hovered card for now
-        
+        // During AI turn, only skip AI highlighted card (no hover effects)
+        if (!gameState.aiThinking && gameState.hoverCardIndex === i) continue; // Skip hovered card for now
+        if (gameState.aiHighlightedCardIndex === i) continue; // Skip AI highlighted card for second pass
+
         const card = gameState.drawnCards[i];
         const row = Math.floor(i / cardsPerRow);
         const col = i % cardsPerRow;
@@ -448,17 +487,46 @@ export class GameUI {
         this.ctx.shadowBlur = 25;
         this.ctx.shadowOffsetX = 0;
         this.ctx.shadowOffsetY = 0;
-        
+
         // Use CardRenderer for visual cards
         this.cardRenderer.renderCard(this.ctx, card, cardX, cardY, cardWidth, cardHeight);
-        
+
         // Reset shadow
         this.ctx.shadowColor = 'transparent';
         this.ctx.shadowBlur = 0;
       }
 
-      // Second pass: render hovered card last (on top) and with animated scale
-      if (gameState.hoverCardIndex !== undefined) {
+      // Second pass: render AI highlighted card with neon glow
+      if (gameState.aiHighlightedCardIndex !== undefined && gameState.aiHighlightedCardIndex < gameState.drawnCards.length) {
+        const i = gameState.aiHighlightedCardIndex;
+        const card = gameState.drawnCards[i];
+        const row = Math.floor(i / cardsPerRow);
+        const col = i % cardsPerRow;
+        const cardX = cardStartX + col * (cardWidth + cardSpacing);
+        const cardY = cardStartY + row * (cardHeight + cardSpacing);
+
+        // Neon cyan glow effect for AI selection
+        this.ctx.save();
+        this.ctx.shadowColor = '#00FFFF';
+        this.ctx.shadowBlur = 40;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+
+        // Draw multiple layers for stronger glow
+        this.cardRenderer.renderCard(this.ctx, card, cardX, cardY, cardWidth, cardHeight);
+        this.ctx.shadowBlur = 60;
+        this.ctx.shadowColor = '#00FFFF';
+        // Draw a glow rectangle around the card
+        this.ctx.strokeStyle = '#00FFFF';
+        this.ctx.lineWidth = 3 * scale;
+        this.roundedRect(this.ctx, cardX - 2, cardY - 2, cardWidth + 4, cardHeight + 4, 8 * scale);
+        this.ctx.stroke();
+
+        this.ctx.restore();
+      }
+
+      // Second pass: render hovered card last (on top) and with animated scale (but not during AI turn)
+      if (gameState.hoverCardIndex !== undefined && !gameState.aiThinking) {
         const i = gameState.hoverCardIndex;
         const card = gameState.drawnCards[i];
         const row = Math.floor(i / cardsPerRow);
@@ -496,8 +564,8 @@ export class GameUI {
       }
     }
 
-    // Draw cursor dot if holding a card
-    if (gameState.selectedCard !== undefined) {
+    // Draw cursor dot if holding a card (but not during AI turn)
+    if (gameState.selectedCard !== undefined && !gameState.aiThinking) {
       const boardWidth = window.innerWidth * 0.6;
       const isOverBoard = gameState.mouseX < boardWidth;
       
@@ -538,8 +606,8 @@ export class GameUI {
       this.cardRenderer.renderFrameAndCharacter(this.ctx, gameState.selectedCard, previewX, previewY, previewWidth, previewHeight);
     }
 
-    // Draw event card following mouse when in event target mode (but not during swap confirm)
-    if (gameState.eventTargetMode && gameState.drawnEvent && !gameState.swapConfirmMode) {
+    // Draw event card following mouse when in event target mode (but not during swap confirm or AI turn)
+    if (gameState.eventTargetMode && gameState.drawnEvent && !gameState.swapConfirmMode && !gameState.aiThinking) {
       const boardWidth = window.innerWidth * 0.6;
       const isOverBoard = gameState.mouseX < boardWidth;
 
@@ -880,6 +948,53 @@ export class GameUI {
 
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
+    }
+
+    // "Your turn" overlay after AI completes its turn
+    if (gameState.aiShowYourTurn) {
+      const boardWidth = window.innerWidth * 0.6;
+
+      // Calculate fade-in/fade-out based on time
+      let alpha = 1.0;
+      if (gameState.aiYourTurnStartTime) {
+        const elapsed = Date.now() - gameState.aiYourTurnStartTime;
+        if (elapsed < 300) {
+          // Fade in
+          alpha = elapsed / 300;
+        } else if (elapsed > 1200) {
+          // Fade out
+          alpha = Math.max(0, 1 - (elapsed - 1200) / 300);
+        }
+        // Request animation frame for smooth animation
+        if (elapsed < 1500) {
+          requestAnimationFrame(() => this.render(gameState));
+        }
+      }
+
+      // Draw semi-transparent backdrop over board area
+      this.ctx.fillStyle = `rgba(0, 0, 0, ${0.5 * alpha})`;
+      this.ctx.fillRect(0, 0, boardWidth, window.innerHeight);
+
+      // Draw "Your turn" text with neon glow
+      this.ctx.save();
+      this.ctx.globalAlpha = alpha;
+      this.ctx.fillStyle = '#00FFFF';
+      this.ctx.font = `bold ${72 * scale}px "Smooch Sans", sans-serif`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.shadowColor = '#00FFFF';
+      this.ctx.shadowBlur = 30;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+
+      // Draw text multiple times for stronger glow
+      const textX = boardWidth / 2;
+      const textY = window.innerHeight / 2;
+      this.ctx.fillText('YOUR TURN', textX, textY);
+      this.ctx.shadowBlur = 50;
+      this.ctx.fillText('YOUR TURN', textX, textY);
+
+      this.ctx.restore();
     }
   }
 

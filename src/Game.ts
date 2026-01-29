@@ -80,7 +80,22 @@ export class Game {
       await this.aiController.executeTurn();
 
       this.state.aiThinking = false;
-      this.onUpdate();
+
+      // Show "Your turn" text after AI completes (only if game is still in placement)
+      if (this.state.phase === 'placement' && this.state.currentPlayer === 'human') {
+        this.state.aiShowYourTurn = true;
+        this.state.aiYourTurnStartTime = Date.now();
+        this.onUpdate();
+
+        // Hide after 1.5 seconds
+        setTimeout(() => {
+          this.state.aiShowYourTurn = false;
+          this.state.aiYourTurnStartTime = undefined;
+          this.onUpdate();
+        }, 1500);
+      } else {
+        this.onUpdate();
+      }
     }
   }
 

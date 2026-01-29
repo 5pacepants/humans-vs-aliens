@@ -9,8 +9,9 @@ export class AIController {
   private game: Game;
   private aiFaction: 'human' | 'alien';
   private isProcessing: boolean = false;
-  private turnDelay: number = 800; // ms between major actions
-  private actionDelay: number = 400; // ms between minor actions
+  private turnDelay: number = 1200; // ms between major actions (slower for visibility)
+  private actionDelay: number = 800; // ms between minor actions (slower for visibility)
+  private highlightDelay: number = 1000; // ms to show highlight before acting
 
   constructor(strategy: AIStrategy, game: Game, aiFaction: 'human' | 'alien' = 'alien') {
     this.strategy = strategy;
@@ -69,13 +70,21 @@ export class AIController {
       // Step 2: Wait for cards to be visible
       await this.delay(this.actionDelay);
 
-      // Step 3: Select a card
+      // Step 3: Select a card with highlight
       if (this.game.state.drawnCards.length > 0) {
         const cardIndex = this.strategy.chooseCardFromDrawn(
           this.game.state.drawnCards,
           this.game.state
         );
+
+        // Highlight the selected card with neon glow
+        this.game.state.aiHighlightedCardIndex = cardIndex;
+        this.game.update();
+        await this.delay(this.highlightDelay);
+
+        // Now select the card
         this.game.selectCard(cardIndex);
+        this.game.state.aiHighlightedCardIndex = undefined;
 
         await this.delay(this.actionDelay);
 
@@ -123,10 +132,21 @@ export class AIController {
     // Decide whether to skip
     const shouldSkip = this.strategy.shouldSkipEvent(event, skipsRemaining, this.game.state);
 
-    await this.delay(this.actionDelay);
+    // Show highlight on event card or skip button based on decision
+    if (shouldSkip) {
+      this.game.state.aiHighlightedAction = 'skip';
+    } else {
+      this.game.state.aiHighlightedAction = 'play';
+    }
+    this.game.update();
+    await this.delay(this.highlightDelay);
+
+    // Clear highlight and execute
+    this.game.state.aiHighlightedAction = undefined;
 
     if (shouldSkip) {
       this.game.skipEvent();
+      this.game.update();
       return;
     }
 

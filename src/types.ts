@@ -73,6 +73,10 @@ export interface GameState {
   aiDifficulty?: AIDifficulty;
   playerFaction?: 'human' | 'alien'; // Which faction the human player controls
   aiThinking?: boolean; // True when AI is processing its turn
+  aiHighlightedCardIndex?: number; // Index of card AI has selected (for neon glow)
+  aiHighlightedAction?: 'play' | 'skip'; // Whether AI is playing event or skipping
+  aiShowYourTurn?: boolean; // Show "Your turn" text after AI completes
+  aiYourTurnStartTime?: number; // Timestamp when "Your turn" started showing
     hoverContinueButton?: boolean; // hovered continue button in battle log modal
   turn: number;
   drawnCards: CharacterCard[]; // current drawn cards for selection
