@@ -57,6 +57,9 @@ export interface PlacedCharacter {
   block?: number; // damage absorption from Heavy armor event
 }
 
+export type GameMode = 'local' | 'vsComputer';
+export type AIDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface GameState {
   board: Hex[];
   humanDeck: CharacterCard[];
@@ -64,7 +67,12 @@ export interface GameState {
   eventDeck: EventCard[];
   placedCharacters: PlacedCharacter[];
   currentPlayer: 'human' | 'alien';
-  phase: 'placement' | 'combat' | 'battleLog' | 'scoring';
+  phase: 'menu' | 'placement' | 'combat' | 'battleLog' | 'scoring';
+  // Game mode settings
+  gameMode?: GameMode;
+  aiDifficulty?: AIDifficulty;
+  playerFaction?: 'human' | 'alien'; // Which faction the human player controls
+  aiThinking?: boolean; // True when AI is processing its turn
     hoverContinueButton?: boolean; // hovered continue button in battle log modal
   turn: number;
   drawnCards: CharacterCard[]; // current drawn cards for selection
@@ -103,4 +111,7 @@ export interface GameState {
   eventHistory: string[]; // log of pre-battle events (Thunderstorm, etc.)
   showEventHistory?: boolean; // whether to show event history modal
   hoverEventHistoryButton?: boolean; // hovered event history button
+  // Menu hover states
+  hoverMenuLocal?: boolean;
+  hoverMenuVsComputer?: boolean;
 }

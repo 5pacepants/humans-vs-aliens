@@ -32,6 +32,12 @@ export class GameUI {
   }
 
   render(gameState: GameState, game?: any) {
+    // Render menu screen if in menu phase
+    if (gameState.phase === 'menu') {
+      this.renderMenu(gameState);
+      return;
+    }
+
     const boardWidth = window.innerWidth * 0.6;
     const uiX = boardWidth;
     const uiWidth = window.innerWidth - boardWidth;
@@ -73,7 +79,19 @@ export class GameUI {
     this.ctx.fillStyle = 'white';
     this.ctx.font = `${20 * scale}px Quicksand, sans-serif`;
     this.ctx.fillText(`Phase: ${gameState.phase.toUpperCase()}`, 50 * scale, 50 * scale);
-    this.ctx.fillText(`Player: ${gameState.currentPlayer}`, 50 * scale, 80 * scale);
+
+    // Show player or AI status
+    if (gameState.gameMode === 'vsComputer' && gameState.currentPlayer === 'alien') {
+      this.ctx.fillStyle = '#ff9966';
+      this.ctx.fillText('AI Turn', 50 * scale, 80 * scale);
+      if (gameState.aiThinking) {
+        this.ctx.fillText('Thinking...', 50 * scale, 110 * scale);
+      }
+      this.ctx.fillStyle = 'white';
+    } else {
+      this.ctx.fillText(`Player: ${gameState.currentPlayer}`, 50 * scale, 80 * scale);
+    }
+
     if (gameState.phase === 'combat') {
       this.ctx.fillText(`Combat Turn: ${gameState.currentCombatIndex + 1}/${gameState.combatOrder.length}`, 50 * scale, 110 * scale);
       if (gameState.selectedAttacker) {
@@ -863,6 +881,113 @@ export class GameUI {
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'alphabetic';
     }
+  }
+
+  /**
+   * Render the game mode selection menu
+   */
+  private renderMenu(gameState: GameState): void {
+    const scale = getScale();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    // Draw dark background
+    this.ctx.fillStyle = '#1a1a2e';
+    this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+    // Draw title
+    this.ctx.fillStyle = '#F0D4A8';
+    this.ctx.font = `bold ${64 * scale}px "Smooch Sans", sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    this.ctx.shadowBlur = 10 * scale;
+    this.ctx.fillText('HUMANS VS ALIENS', centerX, centerY - 180 * scale);
+
+    // Reset shadow
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+
+    // Draw subtitle
+    this.ctx.font = `${24 * scale}px Quicksand, sans-serif`;
+    this.ctx.fillStyle = '#aaaaaa';
+    this.ctx.fillText('Select Game Mode', centerX, centerY - 100 * scale);
+
+    // Button dimensions
+    const buttonWidth = 300 * scale;
+    const buttonHeight = 60 * scale;
+    const buttonSpacing = 20 * scale;
+
+    // Local Play button
+    const localButtonX = centerX - buttonWidth / 2;
+    const localButtonY = centerY - buttonHeight - buttonSpacing / 2;
+    const isHoverLocal = gameState.hoverMenuLocal || false;
+
+    this.ctx.fillStyle = isHoverLocal ? '#4a6fa5' : '#2a4a7a';
+    this.roundedRect(this.ctx, localButtonX, localButtonY, buttonWidth, buttonHeight, 10 * scale);
+    this.ctx.fill();
+
+    this.ctx.strokeStyle = '#F0D4A8';
+    this.ctx.lineWidth = 2 * scale;
+    this.roundedRect(this.ctx, localButtonX, localButtonY, buttonWidth, buttonHeight, 10 * scale);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = `bold ${24 * scale}px "Smooch Sans", sans-serif`;
+    this.ctx.fillText('LOCAL PLAY', centerX, localButtonY + buttonHeight / 2);
+
+    // VS Computer button
+    const vsButtonY = centerY + buttonSpacing / 2;
+    const isHoverVs = gameState.hoverMenuVsComputer || false;
+
+    this.ctx.fillStyle = isHoverVs ? '#6a4a8a' : '#4a2a6a';
+    this.roundedRect(this.ctx, localButtonX, vsButtonY, buttonWidth, buttonHeight, 10 * scale);
+    this.ctx.fill();
+
+    this.ctx.strokeStyle = '#F0D4A8';
+    this.ctx.lineWidth = 2 * scale;
+    this.roundedRect(this.ctx, localButtonX, vsButtonY, buttonWidth, buttonHeight, 10 * scale);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillText('VS COMPUTER', centerX, vsButtonY + buttonHeight / 2);
+
+    // Footer text
+    this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
+    this.ctx.fillStyle = '#666666';
+    this.ctx.fillText('Click to select', centerX, centerY + 150 * scale);
+
+    // Reset alignment
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'alphabetic';
+  }
+
+  /**
+   * Get menu button bounds for hit testing
+   */
+  getMenuButtonBounds(): { local: { x: number; y: number; width: number; height: number }; vsComputer: { x: number; y: number; width: number; height: number } } {
+    const scale = getScale();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const buttonWidth = 300 * scale;
+    const buttonHeight = 60 * scale;
+    const buttonSpacing = 20 * scale;
+    const buttonX = centerX - buttonWidth / 2;
+
+    return {
+      local: {
+        x: buttonX,
+        y: centerY - buttonHeight - buttonSpacing / 2,
+        width: buttonWidth,
+        height: buttonHeight
+      },
+      vsComputer: {
+        x: buttonX,
+        y: centerY + buttonSpacing / 2,
+        width: buttonWidth,
+        height: buttonHeight
+      }
+    };
   }
 
   private roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {

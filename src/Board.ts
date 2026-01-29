@@ -101,6 +101,11 @@ export class Board {
   }
 
   render() {
+    // Don't render board during menu phase
+    if (this.gameState.phase === 'menu') {
+      return;
+    }
+
     // Don't clear here - main.ts clears the whole canvas
     const boardWidth = window.innerWidth * 0.6;
     

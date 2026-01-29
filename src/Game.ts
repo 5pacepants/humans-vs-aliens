@@ -1,11 +1,13 @@
 // Game class to manage state and logic
 
-import type { GameState, CharacterCard, EventCard, Hex } from './types';
+import type { GameState, CharacterCard, EventCard, Hex, GameMode, AIDifficulty } from './types';
 import { computeDerivedStats } from './abilities/AbilityEngine';
+import { AIController, AIStrategyMedium } from './ai';
 
 export class Game {
   state: GameState;
   private onUpdate: () => void;
+  private aiController?: AIController;
 
   constructor(onUpdate: () => void) {
     this.onUpdate = onUpdate;
@@ -16,7 +18,7 @@ export class Game {
       eventDeck: this.createEventDeck(),
       placedCharacters: [],
       currentPlayer: 'human',
-      phase: 'placement',
+      phase: 'menu', // Start at menu to select game mode
       turn: 0,
       drawnCards: [],
       humanEventSkips: 3,
@@ -31,6 +33,68 @@ export class Game {
       eventHistory: [],
       hoverContinueButton: false,
     };
+  }
+
+  /**
+   * Set game mode and start the game
+   */
+  setGameMode(mode: GameMode, difficulty?: AIDifficulty): void {
+    this.state.gameMode = mode;
+    this.state.phase = 'placement';
+
+    if (mode === 'vsComputer') {
+      this.state.aiDifficulty = difficulty || 'medium';
+      this.state.playerFaction = 'human'; // Player always plays as humans
+
+      // Create AI controller with medium strategy (for now)
+      const strategy = new AIStrategyMedium('alien');
+      this.aiController = new AIController(strategy, this, 'alien');
+    }
+
+    this.onUpdate();
+  }
+
+  /**
+   * Check if it's the AI's turn
+   */
+  isAITurn(): boolean {
+    return this.state.gameMode === 'vsComputer' &&
+           this.aiController?.isAITurn() || false;
+  }
+
+  /**
+   * Check if AI is currently thinking
+   */
+  isAIThinking(): boolean {
+    return this.aiController?.isThinking() || false;
+  }
+
+  /**
+   * Trigger AI turn if applicable
+   */
+  async triggerAITurn(): Promise<void> {
+    if (this.aiController && this.isAITurn() && !this.isAIThinking()) {
+      this.state.aiThinking = true;
+      this.onUpdate();
+
+      await this.aiController.executeTurn();
+
+      this.state.aiThinking = false;
+      this.onUpdate();
+    }
+  }
+
+  /**
+   * Expose drawEvent for AI controller
+   */
+  drawEvent(): void {
+    this.drawEventInternal();
+  }
+
+  private drawEventInternal(): void {
+    if (this.state.eventDeck.length > 0) {
+      this.state.drawnEvent = this.state.eventDeck.shift()!;
+    }
   }
 
   private createHumanDeck(): CharacterCard[] {
@@ -292,7 +356,7 @@ export class Game {
       // Recompute derived stats after placement so hover info shows correct values
       computeDerivedStats(this.state);
       // Draw event card
-      this.drawEvent();
+      this.drawEventInternal();
       // Check if placement done
       const humanPlaced = this.state.placedCharacters.filter(pc => pc.card.faction === 'human').length;
       const alienPlaced = this.state.placedCharacters.filter(pc => pc.card.faction === 'alien').length;
@@ -306,12 +370,6 @@ export class Game {
         }
       }
       this.onUpdate();
-    }
-  }
-
-  private drawEvent() {
-    if (this.state.eventDeck.length > 0) {
-      this.state.drawnEvent = this.state.eventDeck.shift()!;
     }
   }
 
@@ -730,6 +788,14 @@ export class Game {
     // Switch player and increment turn counter
     this.state.currentPlayer = this.state.currentPlayer === 'human' ? 'alien' : 'human';
     this.state.turn++;
+
+    // Trigger AI turn if it's now the AI's turn
+    if (this.isAITurn()) {
+      // Use setTimeout to allow current stack to complete before AI acts
+      setTimeout(() => {
+        this.triggerAITurn();
+      }, 100);
+    }
   }
 
   selectAttacker(q: number, r: number) {

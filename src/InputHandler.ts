@@ -31,6 +31,17 @@ export class InputHandler {
     this.game.state.mouseX = x;
     this.game.state.mouseY = y;
 
+    // Handle menu phase hover
+    if (this.game.state.phase === 'menu') {
+      this.handleMenuHover(x, y);
+      return;
+    }
+
+    // Block input during AI turn
+    if (this.game.state.aiThinking) {
+      return;
+    }
+
     // Reset hover
     const previousHoverIndex = this.game.state.hoverCardIndex;
     this.game.state.hoverPile = undefined;
@@ -199,10 +210,21 @@ export class InputHandler {
   }
 
   private handleClick(event: MouseEvent) {
-      console.log('Canvas click event:', event.clientX, event.clientY);
+    console.log('Canvas click event:', event.clientX, event.clientY);
     const rect = this.canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+
+    // Handle menu phase click
+    if (this.game.state.phase === 'menu') {
+      this.handleMenuClick(x, y);
+      return;
+    }
+
+    // Block input during AI turn
+    if (this.game.state.aiThinking) {
+      return;
+    }
 
     // If an event is pending, only allow resolve/skip clicks
     const hasEvent = this.game.state.drawnEvent !== undefined;
@@ -483,5 +505,67 @@ export class InputHandler {
     const boardWidth = this.getCSSWidth() * 0.6; // Left 60%
     const boardHeight = this.getCSSHeight();
     return { x: x + boardWidth / 2, y: y + boardHeight / 2 };
+  }
+
+  /**
+   * Handle hover in menu phase
+   */
+  private handleMenuHover(x: number, y: number): void {
+    const scale = getScale();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const buttonWidth = 300 * scale;
+    const buttonHeight = 60 * scale;
+    const buttonSpacing = 20 * scale;
+    const buttonX = centerX - buttonWidth / 2;
+
+    // Reset menu hover states
+    this.game.state.hoverMenuLocal = false;
+    this.game.state.hoverMenuVsComputer = false;
+
+    // Local Play button
+    const localButtonY = centerY - buttonHeight - buttonSpacing / 2;
+    if (x >= buttonX && x < buttonX + buttonWidth &&
+        y >= localButtonY && y < localButtonY + buttonHeight) {
+      this.game.state.hoverMenuLocal = true;
+    }
+
+    // VS Computer button
+    const vsButtonY = centerY + buttonSpacing / 2;
+    if (x >= buttonX && x < buttonX + buttonWidth &&
+        y >= vsButtonY && y < vsButtonY + buttonHeight) {
+      this.game.state.hoverMenuVsComputer = true;
+    }
+
+    this.game.update();
+  }
+
+  /**
+   * Handle click in menu phase
+   */
+  private handleMenuClick(x: number, y: number): void {
+    const scale = getScale();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const buttonWidth = 300 * scale;
+    const buttonHeight = 60 * scale;
+    const buttonSpacing = 20 * scale;
+    const buttonX = centerX - buttonWidth / 2;
+
+    // Local Play button
+    const localButtonY = centerY - buttonHeight - buttonSpacing / 2;
+    if (x >= buttonX && x < buttonX + buttonWidth &&
+        y >= localButtonY && y < localButtonY + buttonHeight) {
+      this.game.setGameMode('local');
+      return;
+    }
+
+    // VS Computer button
+    const vsButtonY = centerY + buttonSpacing / 2;
+    if (x >= buttonX && x < buttonX + buttonWidth &&
+        y >= vsButtonY && y < vsButtonY + buttonHeight) {
+      this.game.setGameMode('vsComputer', 'medium');
+      return;
+    }
   }
 }
