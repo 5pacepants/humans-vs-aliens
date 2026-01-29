@@ -131,29 +131,29 @@ export class Board {
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(dividerX - gradientWidth, 0, gradientWidth * 2, window.innerHeight);
     
-    // Draw hex info box at top right of board area (only when hovering over a hex)
+    // Draw hex info box at top right of board area (only when hovering over a hex) - 80% size
     if (this.gameState.hoverHex) {
-      const infoBoxWidth = 470 * scale;
-      const infoBoxHeight = 200 * scale;
-      const infoBoxX = boardWidth - infoBoxWidth - 10 * scale;
-      const infoBoxY = 10 * scale;
-      const cornerRadius = 8 * scale;
-      
+      const infoBoxWidth = 376 * scale;
+      const infoBoxHeight = 160 * scale;
+      const infoBoxX = boardWidth - infoBoxWidth - 8 * scale;
+      const infoBoxY = 8 * scale;
+      const cornerRadius = 6 * scale;
+
       // Draw rounded rectangle background
       this.ctx.fillStyle = 'gray';
       this.ctx.beginPath();
       this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
       this.ctx.fill();
-      
+
       // Draw thin off-white border with slight purple tint
       this.ctx.strokeStyle = '#f5f2f8';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
       this.ctx.roundRect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius);
       this.ctx.stroke();
-      
+
       this.ctx.fillStyle = 'white';
-      this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
+      this.ctx.font = `${13 * scale}px Quicksand, sans-serif`;
 
       // Find the hex being hovered
       const hoveredHex = this.gameState.board.find(h => h.q === this.gameState.hoverHex!.q && h.r === this.gameState.hoverHex!.r);
@@ -175,34 +175,34 @@ export class Board {
           mountain: 'Impassable terrain'
         };
 
-        let yPos = infoBoxY + 25 * scale;
+        let yPos = infoBoxY + 20 * scale;
 
         // Environment (namefonten)
-        this.ctx.font = `700 ${18 * scale}px "Smooch Sans", sans-serif`;
-        this.ctx.fillText(`Environment: ${terrainNames[hoveredHex.terrain]}`, infoBoxX + 10 * scale, yPos);
-        yPos += 20 * scale;
+        this.ctx.font = `700 ${14 * scale}px "Smooch Sans", sans-serif`;
+        this.ctx.fillText(`Environment: ${terrainNames[hoveredHex.terrain]}`, infoBoxX + 8 * scale, yPos);
+        yPos += 16 * scale;
 
         // Explanation (abilityfonten)
-        this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
-        this.ctx.fillText(terrainExplanations[hoveredHex.terrain], infoBoxX + 10 * scale, yPos);
-        yPos += 25 * scale;
-        
+        this.ctx.font = `${13 * scale}px Quicksand, sans-serif`;
+        this.ctx.fillText(terrainExplanations[hoveredHex.terrain], infoBoxX + 8 * scale, yPos);
+        yPos += 20 * scale;
+
         // Check if a character is placed on this hex
         const placedChar = this.gameState.placedCharacters.find(pc => pc.hex.q === hoveredHex.q && pc.hex.r === hoveredHex.r);
-        
+
         if (placedChar) {
           // Card name (namefonten)
-          this.ctx.font = `700 ${22 * scale}px "Smooch Sans", sans-serif`;
-          this.ctx.fillText(placedChar.card.name, infoBoxX + 10 * scale, yPos);
-          yPos += 20 * scale;
+          this.ctx.font = `700 ${18 * scale}px "Smooch Sans", sans-serif`;
+          this.ctx.fillText(placedChar.card.name, infoBoxX + 8 * scale, yPos);
+          yPos += 16 * scale;
 
           // Type (namefonten)
-          this.ctx.font = `700 ${18 * scale}px "Smooch Sans", sans-serif`;
-          this.ctx.fillText(`Type: ${placedChar.card.type}`, infoBoxX + 10 * scale, yPos);
-          yPos += 20 * scale;
+          this.ctx.font = `700 ${14 * scale}px "Smooch Sans", sans-serif`;
+          this.ctx.fillText(`Type: ${placedChar.card.type}`, infoBoxX + 8 * scale, yPos);
+          yPos += 16 * scale;
 
           // Stats (abilityfonten) - show derived stats with breakdown if modified
-          this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
+          this.ctx.font = `${13 * scale}px Quicksand, sans-serif`;
 
           // Helper function to format stat with breakdown
           const formatStat = (statName: string, statKey: string, original: number, derived?: number) => {
@@ -238,14 +238,14 @@ export class Board {
             return `${statName}: ${original}`;
           };
 
-          this.ctx.fillText(formatStat('Range', 'range', placedChar.card.stats.range, placedChar.derived?.range), infoBoxX + 10 * scale, yPos);
-          yPos += 18 * scale;
-          this.ctx.fillText(formatStat('Attacks', 'attacks', placedChar.card.stats.attacks, placedChar.derived?.attacks), infoBoxX + 10 * scale, yPos);
-          yPos += 18 * scale;
-          this.ctx.fillText(formatStat('Damage', 'damage', placedChar.card.stats.damage, placedChar.derived?.damage), infoBoxX + 10 * scale, yPos);
-          yPos += 18 * scale;
-          this.ctx.fillText(formatStat('Health', 'health', placedChar.card.stats.health, placedChar.derived?.health), infoBoxX + 10 * scale, yPos);
-          yPos += 20 * scale;
+          this.ctx.fillText(formatStat('Range', 'range', placedChar.card.stats.range, placedChar.derived?.range), infoBoxX + 8 * scale, yPos);
+          yPos += 14 * scale;
+          this.ctx.fillText(formatStat('Attacks', 'attacks', placedChar.card.stats.attacks, placedChar.derived?.attacks), infoBoxX + 8 * scale, yPos);
+          yPos += 14 * scale;
+          this.ctx.fillText(formatStat('Damage', 'damage', placedChar.card.stats.damage, placedChar.derived?.damage), infoBoxX + 8 * scale, yPos);
+          yPos += 14 * scale;
+          this.ctx.fillText(formatStat('Health', 'health', placedChar.card.stats.health, placedChar.derived?.health), infoBoxX + 8 * scale, yPos);
+          yPos += 16 * scale;
 
           // Points calculation (abilityfonten)
           const hexPoints = hoveredHex.value;
@@ -253,9 +253,9 @@ export class Board {
           const totalPoints = hexPoints + cardPoints;
 
           if (hexPoints > 0) {
-            this.ctx.fillText(`Points: ${totalPoints} (${cardPoints}+${hexPoints})`, infoBoxX + 10 * scale, yPos);
+            this.ctx.fillText(`Points: ${totalPoints} (${cardPoints}+${hexPoints})`, infoBoxX + 8 * scale, yPos);
           } else {
-            this.ctx.fillText(`Points: ${cardPoints}`, infoBoxX + 10 * scale, yPos);
+            this.ctx.fillText(`Points: ${cardPoints}`, infoBoxX + 8 * scale, yPos);
           }
         }
       }

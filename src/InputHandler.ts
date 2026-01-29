@@ -44,13 +44,13 @@ export class InputHandler {
     const boardWidth = this.getCSSWidth() * 0.6;
     const uiX = boardWidth; // Right 40% starts here
 
-    // Check for event history button hover
+    // Check for event history button hover - 65% size
     const scale = getScale();
     if (this.game.state.phase === 'placement' && this.game.state.eventHistory.length > 0) {
-      const historyButtonWidth = 200 * scale;
-      const historyButtonHeight = 50 * scale;
-      const historyButtonX = boardWidth - historyButtonWidth - 20 * scale;
-      const historyButtonY = 80 * scale;
+      const historyButtonWidth = 130 * scale;
+      const historyButtonHeight = 33 * scale;
+      const historyButtonX = boardWidth - historyButtonWidth - 13 * scale;
+      const historyButtonY = 52 * scale;
 
       if (x >= historyButtonX && x < historyButtonX + historyButtonWidth &&
           y >= historyButtonY && y < historyButtonY + historyButtonHeight) {
@@ -91,14 +91,14 @@ export class InputHandler {
 
         // Battle log 'Continue' button hover
         if (this.game.state.phase === 'battleLog') {
-          const modalWidth = 600 * 2.5 * scale;
-          const modalHeight = 400 * 2.2 * 1.1 * scale;
+          const modalWidth = 600 * 2.5 * 0.7 * scale;
+          const modalHeight = 400 * 2.2 * 1.1 * 0.7 * scale;
           const modalX = (boardWidth - modalWidth) / 2;
           const modalY = (this.getCSSHeight() - modalHeight) / 2;
-          const continueBtnWidth = 260 * scale;
-          const continueBtnHeight = 60 * scale;
+          const continueBtnWidth = 180 * scale;
+          const continueBtnHeight = 42 * scale;
           const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-          const continueBtnY = modalY + modalHeight - continueBtnHeight - 20 * scale;
+          const continueBtnY = modalY + modalHeight - continueBtnHeight - 14 * scale;
           if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
             this.game.state.hoverContinueButton = true;
           } else {
@@ -247,12 +247,12 @@ export class InputHandler {
       }
     }
 
-    // Check for autoplace button click (testing feature)
+    // Check for autoplace button click (testing feature) - 65% size
     if (this.game.state.phase === 'placement') {
-      const autoButtonWidth = 200 * scale;
-      const autoButtonHeight = 50 * scale;
-      const autoButtonX = boardWidth - autoButtonWidth - 20 * scale;
-      const autoButtonY = 20 * scale;
+      const autoButtonWidth = 130 * scale;
+      const autoButtonHeight = 33 * scale;
+      const autoButtonX = boardWidth - autoButtonWidth - 13 * scale;
+      const autoButtonY = 13 * scale;
 
       if (x >= autoButtonX && x < autoButtonX + autoButtonWidth &&
           y >= autoButtonY && y < autoButtonY + autoButtonHeight) {
@@ -260,12 +260,12 @@ export class InputHandler {
         return;
       }
 
-      // Check for event history button click
+      // Check for event history button click - 65% size
       if (this.game.state.eventHistory.length > 0) {
-        const historyButtonWidth = 200 * scale;
-        const historyButtonHeight = 50 * scale;
-        const historyButtonX = boardWidth - historyButtonWidth - 20 * scale;
-        const historyButtonY = 80 * scale;
+        const historyButtonWidth = 130 * scale;
+        const historyButtonHeight = 33 * scale;
+        const historyButtonX = boardWidth - historyButtonWidth - 13 * scale;
+        const historyButtonY = 52 * scale;
 
         if (x >= historyButtonX && x < historyButtonX + historyButtonWidth &&
             y >= historyButtonY && y < historyButtonY + historyButtonHeight) {
@@ -277,14 +277,14 @@ export class InputHandler {
 
     // Always check for continue button click if phase is 'battleLog'
     if (this.game.state.phase === 'battleLog') {
-      const modalWidth = 600 * 2.5 * scale;
-      const modalHeight = 400 * 2.2 * 1.1 * scale;
+      const modalWidth = 600 * 2.5 * 0.7 * scale;
+      const modalHeight = 400 * 2.2 * 1.1 * 0.7 * scale;
       const modalX = (boardWidth - modalWidth) / 2;
       const modalY = (this.getCSSHeight() - modalHeight) / 2;
-      const continueBtnWidth = 260 * scale;
-      const continueBtnHeight = 60 * scale;
+      const continueBtnWidth = 180 * scale;
+      const continueBtnHeight = 42 * scale;
       const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20 * scale;
+      const continueBtnY = modalY + modalHeight - continueBtnHeight - 14 * scale;
       console.log('Continue button bounds:', continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight);
       console.log('Mouse click:', x, y);
       if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {

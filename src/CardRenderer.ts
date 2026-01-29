@@ -20,7 +20,7 @@ export class CardRenderer {
     this.offscreenCtx.imageSmoothingQuality = 'high';
   }
 
-  renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard | EventCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 17) {
+  renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard | EventCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16) {
     // Set up offscreen canvas with supersampling scale
     const scale = this.SUPERSAMPLING_SCALE;
     this.offscreenCanvas.width = width * scale;
@@ -86,7 +86,7 @@ export class CardRenderer {
     ctx.drawImage(this.offscreenCanvas, x, y, width, height);
   }
 
-  private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 17) {
+  private renderCardToContext(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16) {
     // Card colors and dimensions based on faction
     const isHuman = card.faction === 'human';
     const borderColor = isHuman ? '#2a3a4d' : '#5a4570'; // Blue border for human, dark purple for alien
@@ -137,7 +137,7 @@ export class CardRenderer {
     // Draw darker background section for stats in lower left corner
     // Make it wider for preview cards (when abilityFontSize is 13)
     const isPreview = abilityFontSize === 13;
-    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 35 + (isPreview ? 18 : 0);
+    const statsBgWidth = (width - borderWidth * 2) * 0.5 - 28 + (isPreview ? 18 : 0);
     const statsBgHeight = 85; // Increased to fit Init stat
     const statsBgX = x + borderWidth + 5;
     // Moved up 15px to accommodate additional stat line
@@ -363,8 +363,8 @@ export class CardRenderer {
   private drawHealthIcons(ctx: CanvasRenderingContext2D, x: number, y: number, health: number, faction: 'human' | 'alien') {
     const iconKey = faction === 'human' ? 'healthIconHuman' : 'healthIconAlien';
     const icon = this.assetLoader.getAsset(iconKey);
-    const iconSize = 54;
-    const gap = -24; // Negative to overlap and compensate for image padding
+    const iconSize = 44; // 70% of 54, then +15%
+    const gap = -20; // 70% of -24, then +15%
     const count = Math.max(0, Math.min(health, 6));
     for (let i = 0; i < count; i++) {
       const drawX = x + i * (iconSize + gap);
@@ -382,8 +382,8 @@ export class CardRenderer {
   private drawAttackIcons(ctx: CanvasRenderingContext2D, rightX: number, y: number, attacks: number, faction: 'human' | 'alien') {
     const iconKey = faction === 'human' ? 'costIconHuman' : 'costIconAlien';
     const icon = this.assetLoader.getAsset(iconKey);
-    const iconSize = 54;
-    const gap = -24; // Negative to overlap and compensate for image padding
+    const iconSize = 44; // 70% of 54, then +15%
+    const gap = -20; // 70% of -24, then +15%
     const count = Math.max(0, Math.min(attacks, 6));
     const totalWidth = count * iconSize + Math.max(0, count - 1) * gap;
     const startX = rightX - totalWidth;
@@ -400,7 +400,7 @@ export class CardRenderer {
     }
   }
 
-  private drawCardText(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 17) {
+  private drawCardText(ctx: CanvasRenderingContext2D, card: CharacterCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16) {
     // Offset for alien cards to account for larger frame
     const isHuman = card.faction === 'human';
     const offset = isHuman ? 0 : 5;
@@ -442,7 +442,7 @@ export class CardRenderer {
     });
 
     // Stats lines
-    ctx.font = '16px Quicksand, sans-serif';
+    ctx.font = '15px Quicksand, sans-serif';
     ctx.fillStyle = isHuman ? '#000000' : '#ffffff';
     const statsLines = [
       `Range: ${card.stats.range}`,

@@ -559,22 +559,22 @@ export class GameUI {
       this.cardRenderer.renderCard(this.ctx, gameState.drawnEvent, previewX, previewY, previewWidth, previewHeight);
     }
 
-    // Autoplace button (for testing - remove later)
+    // Autoplace button (for testing - remove later) - 65% size
     if (gameState.phase === 'placement' && (gameState.humanDeck.length > 0 || gameState.alienDeck.length > 0)) {
-      const autoButtonWidth = 200 * scale;
-      const autoButtonHeight = 50 * scale;
-      const autoButtonX = boardWidth - autoButtonWidth - 20 * scale;
-      const autoButtonY = 20 * scale;
+      const autoButtonWidth = 130 * scale;
+      const autoButtonHeight = 33 * scale;
+      const autoButtonX = boardWidth - autoButtonWidth - 13 * scale;
+      const autoButtonY = 13 * scale;
 
       this.ctx.fillStyle = '#4a4a4a';
       this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 2 * scale;
-      this.roundedRect(this.ctx, autoButtonX, autoButtonY, autoButtonWidth, autoButtonHeight, 8 * scale);
+      this.ctx.lineWidth = 1.5 * scale;
+      this.roundedRect(this.ctx, autoButtonX, autoButtonY, autoButtonWidth, autoButtonHeight, 5 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = `bold ${18 * scale}px Quicksand, sans-serif`;
+      this.ctx.font = `bold ${12 * scale}px Quicksand, sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('AUTOPLACE ALL', autoButtonX + autoButtonWidth / 2, autoButtonY + autoButtonHeight / 2);
@@ -582,24 +582,24 @@ export class GameUI {
       this.ctx.textBaseline = 'alphabetic';
     }
 
-    // "What just happened?" button - under autoplace button
+    // "What just happened?" button - under autoplace button - 65% size
     if (gameState.phase === 'placement' && gameState.eventHistory.length > 0) {
-      const historyButtonWidth = 200 * scale;
-      const historyButtonHeight = 50 * scale;
-      const historyButtonX = boardWidth - historyButtonWidth - 20 * scale;
-      const historyButtonY = 80 * scale;
+      const historyButtonWidth = 130 * scale;
+      const historyButtonHeight = 33 * scale;
+      const historyButtonX = boardWidth - historyButtonWidth - 13 * scale;
+      const historyButtonY = 52 * scale;
 
       const isHovered = gameState.hoverEventHistoryButton || false;
 
       this.ctx.fillStyle = isHovered ? '#5a5a5a' : '#4a4a4a';
       this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 2 * scale;
-      this.roundedRect(this.ctx, historyButtonX, historyButtonY, historyButtonWidth, historyButtonHeight, 8 * scale);
+      this.ctx.lineWidth = 1.5 * scale;
+      this.roundedRect(this.ctx, historyButtonX, historyButtonY, historyButtonWidth, historyButtonHeight, 5 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = `bold ${16 * scale}px Quicksand, sans-serif`;
+      this.ctx.font = `bold ${10 * scale}px Quicksand, sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('What just happened?', historyButtonX + historyButtonWidth / 2, historyButtonY + historyButtonHeight / 2);
@@ -687,11 +687,11 @@ export class GameUI {
       this.ctx.textBaseline = 'alphabetic';
     }
 
-    // Battle log modal in center of board
+    // Battle log modal in center of board (70% size, 50% text)
     if (gameState.phase === 'battleLog') {
       const boardWidth = window.innerWidth * 0.6;
-      const modalWidth = 600 * 2.5 * scale;
-      const modalHeight = 400 * 2.2 * 1.1 * scale;
+      const modalWidth = 600 * 2.5 * 0.7 * scale;
+      const modalHeight = 400 * 2.2 * 1.1 * 0.7 * scale;
       const modalX = (boardWidth - modalWidth) / 2;
       const modalY = (window.innerHeight - modalHeight) / 2;
 
@@ -702,30 +702,30 @@ export class GameUI {
       // Draw modal background
       this.ctx.fillStyle = '#2a1810';
       this.ctx.strokeStyle = '#F0D4A8';
-      this.ctx.lineWidth = 6 * scale;
-      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 20 * scale);
+      this.ctx.lineWidth = 4 * scale;
+      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 14 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       // Draw title
       this.ctx.fillStyle = '#F0D4A8';
-      this.ctx.font = `bold ${48 * scale}px "Smooch Sans", sans-serif`;
+      this.ctx.font = `bold ${24 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 10 * scale;
-      this.ctx.shadowOffsetX = 3 * scale;
-      this.ctx.shadowOffsetY = 3 * scale;
-      this.ctx.fillText('BATTLE LOG', modalX + modalWidth / 2, modalY + 70 * scale);
+      this.ctx.shadowBlur = 5 * scale;
+      this.ctx.shadowOffsetX = 2 * scale;
+      this.ctx.shadowOffsetY = 2 * scale;
+      this.ctx.fillText('BATTLE LOG', modalX + modalWidth / 2, modalY + 35 * scale);
 
       // Draw log lines
-      this.ctx.font = `${19 * scale}px Quicksand, sans-serif`;
+      this.ctx.font = `${10 * scale}px Quicksand, sans-serif`;
       this.ctx.textAlign = 'left';
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
-      let y = modalY + 120 * scale;
-      const lineHeight = 32 * scale;
-      const colWidth = (modalWidth - 60 * scale) / 2;
+      let y = modalY + 60 * scale;
+      const lineHeight = 16 * scale;
+      const colWidth = (modalWidth - 30 * scale) / 2;
       let col = 0;
       let linesDrawn = 0;
 
@@ -775,13 +775,13 @@ export class GameUI {
       if (gameState.battleLog) {
         for (const line of gameState.battleLog) {
           this.ctx.fillStyle = getLogColor(line);
-          this.ctx.fillText(line, modalX + 30 * scale + col * colWidth, y);
+          this.ctx.fillText(line, modalX + 15 * scale + col * colWidth, y);
           y += lineHeight;
           linesDrawn++;
           // Om vi når botten av första kolumnen, byt till nästa
-          if (y > modalY + modalHeight - 40 * scale) {
+          if (y > modalY + modalHeight - 50 * scale) {
             col++;
-            y = modalY + 120 * scale;
+            y = modalY + 60 * scale;
           }
         }
       }
@@ -791,21 +791,21 @@ export class GameUI {
       this.ctx.textBaseline = 'alphabetic';
 
         // Draw 'Continue' button at the bottom center of the modal
-        const continueBtnWidth = 260 * scale;
-        const continueBtnHeight = 60 * scale;
+        const continueBtnWidth = 180 * scale;
+        const continueBtnHeight = 42 * scale;
         const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-        const continueBtnY = modalY + modalHeight - continueBtnHeight - 20 * scale;
+        const continueBtnY = modalY + modalHeight - continueBtnHeight - 14 * scale;
         // Button background
         this.ctx.fillStyle = gameState.hoverContinueButton ? '#3A7A2A' : '#4CAF50';
-        this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 12 * scale);
+        this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 8 * scale);
         this.ctx.fill();
         // Button text
-        this.ctx.font = `bold ${32 * scale}px "Smooch Sans", sans-serif`;
+        this.ctx.font = `bold ${16 * scale}px "Smooch Sans", sans-serif`;
         this.ctx.fillStyle = '#F0D4A8';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.shadowBlur = 6 * scale;
+        this.ctx.shadowBlur = 3 * scale;
         this.ctx.fillText('Continue', continueBtnX + continueBtnWidth / 2, continueBtnY + continueBtnHeight / 2);
         // Reset shadow
         this.ctx.shadowColor = 'transparent';

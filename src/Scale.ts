@@ -16,8 +16,8 @@ export function getScale(): number {
 export const BASE_HEX_SIZE = 75;
 export const BASE_CARD_WIDTH = 220;
 export const BASE_CARD_HEIGHT = 353;
-export const BASE_SMALL_CARD_WIDTH = 200;
-export const BASE_SMALL_CARD_HEIGHT = 320;
+export const BASE_SMALL_CARD_WIDTH = 230; // 15% larger
+export const BASE_SMALL_CARD_HEIGHT = 368; // 15% larger
 
 // Get scaled sizes
 export function getHexSize(): number {
