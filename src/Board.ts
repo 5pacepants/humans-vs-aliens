@@ -3,12 +3,16 @@
 import type { Hex, GameState, HexTerrain } from './types';
 import { TextureLoader } from './TextureLoader';
 import { CardRenderer } from './CardRenderer';
+import { getHexSize, getScale } from './Scale';
 
 export class Board {
   private hexes: Hex[] = [];
-  private hexSize = 100;
-  private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  // Dynamic hexSize getter
+  private get hexSize(): number {
+    return getHexSize();
+  }
   private gameState: GameState;
   private textureLoader: TextureLoader;
   private cardRenderer: CardRenderer;
@@ -17,7 +21,6 @@ export class Board {
   private backgroundImage: HTMLImageElement;
 
   constructor(canvas: HTMLCanvasElement, gameState: GameState) {
-    this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.gameState = gameState;
     this.textureLoader = new TextureLoader();
@@ -92,29 +95,30 @@ export class Board {
   private hexToPixel(q: number, r: number): { x: number; y: number } {
     const x = this.hexSize * (3/2 * q);
     const y = this.hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-    const boardWidth = this.canvas.width * 0.6; // Left 60% of screen
-    const boardHeight = this.canvas.height;
+    const boardWidth = window.innerWidth * 0.6; // Left 60% of screen
+    const boardHeight = window.innerHeight;
     return { x: x + boardWidth / 2, y: y + boardHeight / 2 };
   }
 
   render() {
     // Don't clear here - main.ts clears the whole canvas
-    const boardWidth = this.canvas.width * 0.6;
+    const boardWidth = window.innerWidth * 0.6;
     
     // Save context and clip to board area only (left 60%)
     this.ctx.save();
     this.ctx.beginPath();
-    this.ctx.rect(0, 0, boardWidth, this.canvas.height);
+    this.ctx.rect(0, 0, boardWidth, window.innerHeight);
     this.ctx.clip();
     
     // Draw background image on left 60%
     if (this.backgroundImage.complete) {
-      this.ctx.drawImage(this.backgroundImage, 0, 0, boardWidth, this.canvas.height);
+      this.ctx.drawImage(this.backgroundImage, 0, 0, boardWidth, window.innerHeight);
     }
     
     // Create very soft gradient transition between hex side and card side
+    const scale = getScale();
     const dividerX = boardWidth;
-    const gradientWidth = 100; // Much wider gradient for smoother blend
+    const gradientWidth = 100 * scale; // Much wider gradient for smoother blend
     
     // Create subtle gradient overlay
     const gradient = this.ctx.createLinearGradient(dividerX - gradientWidth, 0, dividerX + gradientWidth, 0);
@@ -125,15 +129,15 @@ export class Board {
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     
     this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(dividerX - gradientWidth, 0, gradientWidth * 2, this.canvas.height);
+    this.ctx.fillRect(dividerX - gradientWidth, 0, gradientWidth * 2, window.innerHeight);
     
     // Draw hex info box at top right of board area (only when hovering over a hex)
     if (this.gameState.hoverHex) {
-      const infoBoxWidth = 470;
-      const infoBoxHeight = 200; // Increased to fit Damage stat
-      const infoBoxX = boardWidth - infoBoxWidth - 10;
-      const infoBoxY = 10;
-      const cornerRadius = 8;
+      const infoBoxWidth = 470 * scale;
+      const infoBoxHeight = 200 * scale;
+      const infoBoxX = boardWidth - infoBoxWidth - 10 * scale;
+      const infoBoxY = 10 * scale;
+      const cornerRadius = 8 * scale;
       
       // Draw rounded rectangle background
       this.ctx.fillStyle = 'gray';
@@ -149,8 +153,8 @@ export class Board {
       this.ctx.stroke();
       
       this.ctx.fillStyle = 'white';
-      this.ctx.font = '16px Quicksand, sans-serif';
-      
+      this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
+
       // Find the hex being hovered
       const hoveredHex = this.gameState.board.find(h => h.q === this.gameState.hoverHex!.q && h.r === this.gameState.hoverHex!.r);
       if (hoveredHex) {
@@ -162,7 +166,7 @@ export class Board {
           toxic: 'Toxic Swamp',
           mountain: 'Mountain'
         };
-        
+
         const terrainExplanations: Record<HexTerrain, string> = {
           grass: 'Neutral terrain without effects',
           water: 'Character loses 1 health (min 1)',
@@ -170,35 +174,35 @@ export class Board {
           toxic: 'Aliens gain 1 damage. Humans lose 1 damage (min 1)',
           mountain: 'Impassable terrain'
         };
-        
-        let yPos = infoBoxY + 25;
-        
+
+        let yPos = infoBoxY + 25 * scale;
+
         // Environment (namefonten)
-        this.ctx.font = '700 18px "Smooch Sans", sans-serif';
-        this.ctx.fillText(`Environment: ${terrainNames[hoveredHex.terrain]}`, infoBoxX + 10, yPos);
-        yPos += 20;
-        
+        this.ctx.font = `700 ${18 * scale}px "Smooch Sans", sans-serif`;
+        this.ctx.fillText(`Environment: ${terrainNames[hoveredHex.terrain]}`, infoBoxX + 10 * scale, yPos);
+        yPos += 20 * scale;
+
         // Explanation (abilityfonten)
-        this.ctx.font = '16px Quicksand, sans-serif';
-        this.ctx.fillText(terrainExplanations[hoveredHex.terrain], infoBoxX + 10, yPos);
-        yPos += 25;
+        this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
+        this.ctx.fillText(terrainExplanations[hoveredHex.terrain], infoBoxX + 10 * scale, yPos);
+        yPos += 25 * scale;
         
         // Check if a character is placed on this hex
         const placedChar = this.gameState.placedCharacters.find(pc => pc.hex.q === hoveredHex.q && pc.hex.r === hoveredHex.r);
         
         if (placedChar) {
           // Card name (namefonten)
-          this.ctx.font = '700 22px "Smooch Sans", sans-serif';
-          this.ctx.fillText(placedChar.card.name, infoBoxX + 10, yPos);
-          yPos += 20;
-          
+          this.ctx.font = `700 ${22 * scale}px "Smooch Sans", sans-serif`;
+          this.ctx.fillText(placedChar.card.name, infoBoxX + 10 * scale, yPos);
+          yPos += 20 * scale;
+
           // Type (namefonten)
-          this.ctx.font = '700 18px "Smooch Sans", sans-serif';
-          this.ctx.fillText(`Type: ${placedChar.card.type}`, infoBoxX + 10, yPos);
-          yPos += 20;
-          
+          this.ctx.font = `700 ${18 * scale}px "Smooch Sans", sans-serif`;
+          this.ctx.fillText(`Type: ${placedChar.card.type}`, infoBoxX + 10 * scale, yPos);
+          yPos += 20 * scale;
+
           // Stats (abilityfonten) - show derived stats with breakdown if modified
-          this.ctx.font = '16px Quicksand, sans-serif';
+          this.ctx.font = `${16 * scale}px Quicksand, sans-serif`;
 
           // Helper function to format stat with breakdown
           const formatStat = (statName: string, statKey: string, original: number, derived?: number) => {
@@ -234,24 +238,24 @@ export class Board {
             return `${statName}: ${original}`;
           };
 
-          this.ctx.fillText(formatStat('Range', 'range', placedChar.card.stats.range, placedChar.derived?.range), infoBoxX + 10, yPos);
-          yPos += 18;
-          this.ctx.fillText(formatStat('Attacks', 'attacks', placedChar.card.stats.attacks, placedChar.derived?.attacks), infoBoxX + 10, yPos);
-          yPos += 18;
-          this.ctx.fillText(formatStat('Damage', 'damage', placedChar.card.stats.damage, placedChar.derived?.damage), infoBoxX + 10, yPos);
-          yPos += 18;
-          this.ctx.fillText(formatStat('Health', 'health', placedChar.card.stats.health, placedChar.derived?.health), infoBoxX + 10, yPos);
-          yPos += 20;
-          
+          this.ctx.fillText(formatStat('Range', 'range', placedChar.card.stats.range, placedChar.derived?.range), infoBoxX + 10 * scale, yPos);
+          yPos += 18 * scale;
+          this.ctx.fillText(formatStat('Attacks', 'attacks', placedChar.card.stats.attacks, placedChar.derived?.attacks), infoBoxX + 10 * scale, yPos);
+          yPos += 18 * scale;
+          this.ctx.fillText(formatStat('Damage', 'damage', placedChar.card.stats.damage, placedChar.derived?.damage), infoBoxX + 10 * scale, yPos);
+          yPos += 18 * scale;
+          this.ctx.fillText(formatStat('Health', 'health', placedChar.card.stats.health, placedChar.derived?.health), infoBoxX + 10 * scale, yPos);
+          yPos += 20 * scale;
+
           // Points calculation (abilityfonten)
           const hexPoints = hoveredHex.value;
           const cardPoints = placedChar.card.stats.points;
           const totalPoints = hexPoints + cardPoints;
-          
+
           if (hexPoints > 0) {
-            this.ctx.fillText(`Points: ${totalPoints} (${cardPoints}+${hexPoints})`, infoBoxX + 10, yPos);
+            this.ctx.fillText(`Points: ${totalPoints} (${cardPoints}+${hexPoints})`, infoBoxX + 10 * scale, yPos);
           } else {
-            this.ctx.fillText(`Points: ${cardPoints}`, infoBoxX + 10, yPos);
+            this.ctx.fillText(`Points: ${cardPoints}`, infoBoxX + 10 * scale, yPos);
           }
         }
       }
@@ -259,8 +263,8 @@ export class Board {
     
     // Render hexes
     this.ctx.strokeStyle = 'white';
-    this.ctx.lineWidth = 2;
-    this.ctx.font = '30px Quicksand, sans-serif';
+    this.ctx.lineWidth = 2 * scale;
+    this.ctx.font = `${21 * scale}px Quicksand, sans-serif`;
 
     for (const hex of this.hexes) {
       const { x, y } = this.hexToPixel(hex.q, hex.r);
@@ -271,38 +275,38 @@ export class Board {
       // Highlight hovered hex
       if (this.gameState.hoverHex && this.gameState.hoverHex.q === hex.q && this.gameState.hoverHex.r === hex.r) {
         this.ctx.strokeStyle = 'yellow';
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 3 * scale;
         this.drawHexOutline(x, y);
         this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2 * scale;
       }
       // Render character if placed
       const placed = this.gameState.placedCharacters.find(pc => pc.hex.q === hex.q && pc.hex.r === hex.r);
       if (placed) {
         this.ctx.strokeStyle = placed.card.faction === 'human' ? 'blue' : 'red';
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 3 * scale;
         this.drawHex(x, y);
         this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2 * scale;
 
         // Character image now drawn in drawTerrainHex for proper layering
 
         // Highlight current active in combat
         if (this.gameState.phase === 'combat' && this.gameState.combatOrder[this.gameState.currentCombatIndex] === placed) {
           this.ctx.strokeStyle = 'yellow';
-          this.ctx.lineWidth = 4;
+          this.ctx.lineWidth = 4 * scale;
           this.drawHexOutline(x, y);
           this.ctx.strokeStyle = 'white';
-          this.ctx.lineWidth = 2;
+          this.ctx.lineWidth = 2 * scale;
         }
         // Highlight selected attacker
         if (this.gameState.selectedAttacker === placed) {
           const color = placed.card.faction === 'human' ? 'blue' : 'red';
           this.ctx.strokeStyle = color;
-          this.ctx.lineWidth = 4;
+          this.ctx.lineWidth = 4 * scale;
           this.drawHexOutline(x, y);
           this.ctx.strokeStyle = 'white';
-          this.ctx.lineWidth = 2;
+          this.ctx.lineWidth = 2 * scale;
         }
         // Highlight swap targets with orange neon glow
         const isSwapFirst = this.gameState.swapFirstTarget &&
@@ -313,12 +317,12 @@ export class Board {
           // Orange neon glow effect
           this.ctx.save();
           this.ctx.shadowColor = '#FF6600';
-          this.ctx.shadowBlur = 20;
+          this.ctx.shadowBlur = 20 * scale;
           this.ctx.strokeStyle = '#FF9900';
-          this.ctx.lineWidth = 5;
+          this.ctx.lineWidth = 5 * scale;
           this.drawHexOutline(x, y);
           // Draw again for stronger glow
-          this.ctx.shadowBlur = 10;
+          this.ctx.shadowBlur = 10 * scale;
           this.drawHexOutline(x, y);
           this.ctx.restore();
         }
@@ -327,28 +331,28 @@ export class Board {
         const color = this.gameState.selectedCard.faction === 'human' ? 'blue' : 'red';
         const canPlace = this.canPlaceAt(hex);
         this.ctx.strokeStyle = canPlace ? color : 'orange'; // Orange if can't place
-        this.ctx.lineWidth = 4;
+        this.ctx.lineWidth = 4 * scale;
         this.drawHex(x, y);
         this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2 * scale;
       }
       // Render value last, on top
       if (!hex.isMountain && hex.value > 0) {
         // Add very strong dark shadow for maximum visibility
         this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-        this.ctx.shadowBlur = 20;
-        this.ctx.shadowOffsetX = 4;
-        this.ctx.shadowOffsetY = 4;
-        
+        this.ctx.shadowBlur = 20 * scale;
+        this.ctx.shadowOffsetX = 4 * scale;
+        this.ctx.shadowOffsetY = 4 * scale;
+
         // Also add a black stroke outline
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 6;
-        this.ctx.strokeText(hex.value.toString(), x - 5, y + 5);
-        
+        this.ctx.lineWidth = 6 * scale;
+        this.ctx.strokeText(hex.value.toString(), x - 5 * scale, y + 5 * scale);
+
         // Then fill with white
         this.ctx.fillStyle = 'white';
-        this.ctx.fillText(hex.value.toString(), x - 5, y + 5);
-        
+        this.ctx.fillText(hex.value.toString(), x - 5 * scale, y + 5 * scale);
+
         // Reset shadow and stroke
         this.ctx.shadowColor = 'transparent';
         this.ctx.shadowBlur = 0;
@@ -363,18 +367,19 @@ export class Board {
         pc => pc.hex.q === this.gameState.hoverHex!.q && pc.hex.r === this.gameState.hoverHex!.r
       );
       if (hoveredPlaced) {
-        const previewWidth = 250;
-        const previewHeight = 400;
-        const eventCardWidth = 220;
-        const eventCardHeight = 350;
+        const previewScale = getScale();
+        const previewWidth = 250 * previewScale;
+        const previewHeight = 400 * previewScale;
+        const eventCardWidth = 220 * previewScale;
+        const eventCardHeight = 350 * previewScale;
         const mouseX = this.gameState.mouseX;
         const mouseY = this.gameState.mouseY;
-        const boardWidth = this.canvas.width * 0.6;
+        const boardWidth = window.innerWidth * 0.6;
         const boardCenterX = boardWidth / 2;
 
         // Calculate total width including event cards
         const numEventCards = hoveredPlaced.eventEffects?.length || 0;
-        const eventCardsWidth = numEventCards > 0 ? (eventCardWidth + 10) * numEventCards : 0;
+        const eventCardsWidth = numEventCards > 0 ? (eventCardWidth + 10 * previewScale) * numEventCards : 0;
         const totalWidth = previewWidth + eventCardsWidth;
 
         let previewX: number;
@@ -383,27 +388,27 @@ export class Board {
         // Bestäm vänster eller höger sida baserat på musens X-position
         if (mouseX < boardCenterX) {
           // Vänster sida av brädet - visa kortet till höger om musen
-          previewX = mouseX + 30;
+          previewX = mouseX + 30 * previewScale;
         } else {
           // Höger sida eller mittlinjen - visa kortet till vänster om musen
-          previewX = mouseX - totalWidth - 30;
+          previewX = mouseX - totalWidth - 30 * previewScale;
         }
 
         // Se till att kortet inte går utanför canvas
-        previewX = Math.max(10, Math.min(previewX, boardWidth - totalWidth - 10));
-        previewY = Math.max(10, Math.min(previewY, this.canvas.height - previewHeight - 10));
+        previewX = Math.max(10 * previewScale, Math.min(previewX, boardWidth - totalWidth - 10 * previewScale));
+        previewY = Math.max(10 * previewScale, Math.min(previewY, window.innerHeight - previewHeight - 10 * previewScale));
 
         // Render character card
         this.cardRenderer.renderCard(this.ctx, hoveredPlaced.card, previewX, previewY, previewWidth, previewHeight, 13);
 
         // Render event cards to the right of character card
         if (hoveredPlaced.eventEffects && hoveredPlaced.eventEffects.length > 0) {
-          let eventX = previewX + previewWidth + 10;
+          let eventX = previewX + previewWidth + 10 * previewScale;
           const eventY = previewY + (previewHeight - eventCardHeight) / 2; // Center vertically
 
           for (const eventCard of hoveredPlaced.eventEffects) {
             this.cardRenderer.renderCard(this.ctx, eventCard, eventX, eventY, eventCardWidth, eventCardHeight, 10);
-            eventX += eventCardWidth + 10;
+            eventX += eventCardWidth + 10 * previewScale;
           }
         }
       }
@@ -517,8 +522,9 @@ export class Board {
     // Draw event effect icons in lower half of hex if character has been affected
     if (placed && placed.eventEffects && placed.eventEffects.length > 0) {
       this.ctx.save();
-      // Halve icon size if 4 or more effects
-      const iconSize = placed.eventEffects.length >= 4 ? 18 : 36;
+      const iconScale = getScale();
+      // Halve icon size if 4 or more effects (reduced to 70% of original)
+      const iconSize = (placed.eventEffects.length >= 4 ? 13 : 25) * iconScale;
       this.ctx.font = `${iconSize}px Arial`;
       this.ctx.textAlign = 'center';
       this.ctx.shadowColor = 'black';
@@ -550,7 +556,7 @@ export class Board {
     }
     this.ctx.closePath();
     this.ctx.strokeStyle = 'white';
-    this.ctx.lineWidth = 2;
+    this.ctx.lineWidth = 2 * getScale();
     this.ctx.stroke();
   }
 

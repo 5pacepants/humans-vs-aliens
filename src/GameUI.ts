@@ -2,9 +2,9 @@
 
 import type { GameState } from './types';
 import { CardRenderer } from './CardRenderer';
+import { getScale, getCardWidth, getCardHeight, getSmallCardWidth, getSmallCardHeight } from './Scale';
 
 export class GameUI {
-  private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private cardRenderer: CardRenderer;
   private backgroundImage: HTMLImageElement;
@@ -13,7 +13,6 @@ export class GameUI {
   private cardbackEvent: HTMLImageElement;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.cardRenderer = new CardRenderer();
     
@@ -33,9 +32,9 @@ export class GameUI {
   }
 
   render(gameState: GameState, game?: any) {
-    const boardWidth = this.canvas.width * 0.6;
+    const boardWidth = window.innerWidth * 0.6;
     const uiX = boardWidth;
-    const uiWidth = this.canvas.width - boardWidth;
+    const uiWidth = window.innerWidth - boardWidth;
 
     // Draw background image for UI (right 40%)
     if (this.backgroundImage.complete) {
@@ -44,48 +43,51 @@ export class GameUI {
       
       // Clip to UI area to prevent shadows bleeding into hex side
       this.ctx.beginPath();
-      this.ctx.rect(uiX, 0, uiWidth, this.canvas.height);
+      this.ctx.rect(uiX, 0, uiWidth, window.innerHeight);
       this.ctx.clip();
       
-      this.ctx.drawImage(this.backgroundImage, uiX, 0, uiWidth, this.canvas.height);
+      this.ctx.drawImage(this.backgroundImage, uiX, 0, uiWidth, window.innerHeight);
       
       // Apply soft gradient fade on left edge
-      const gradientWidth = 120;
+      const gradientWidth = 120 * getScale();
       const fadeGradient = this.ctx.createLinearGradient(uiX, 0, uiX + gradientWidth, 0);
       fadeGradient.addColorStop(0, 'rgba(74, 84, 98, 0.6)');
       fadeGradient.addColorStop(0.5, 'rgba(74, 84, 98, 0.2)');
       fadeGradient.addColorStop(1, 'rgba(74, 84, 98, 0)');
       
       this.ctx.fillStyle = fadeGradient;
-      this.ctx.fillRect(uiX, 0, gradientWidth, this.canvas.height);
+      this.ctx.fillRect(uiX, 0, gradientWidth, window.innerHeight);
       
       // Restore context - removes clipping so shadows can render properly
       this.ctx.restore();
     } else {
       // Fallback to gray background if image not loaded
       this.ctx.fillStyle = '#4a4a4a';
-      this.ctx.fillRect(uiX, 0, uiWidth, this.canvas.height);
+      this.ctx.fillRect(uiX, 0, uiWidth, window.innerHeight);
     }
     
+    // Get scale factor for responsive sizing
+    const scale = getScale();
+
     // Render phase/status info at top left
     this.ctx.fillStyle = 'white';
-    this.ctx.font = '20px Quicksand, sans-serif';
-    this.ctx.fillText(`Phase: ${gameState.phase.toUpperCase()}`, 50, 50);
-    this.ctx.fillText(`Player: ${gameState.currentPlayer}`, 50, 80);
+    this.ctx.font = `${20 * scale}px Quicksand, sans-serif`;
+    this.ctx.fillText(`Phase: ${gameState.phase.toUpperCase()}`, 50 * scale, 50 * scale);
+    this.ctx.fillText(`Player: ${gameState.currentPlayer}`, 50 * scale, 80 * scale);
     if (gameState.phase === 'combat') {
-      this.ctx.fillText(`Combat Turn: ${gameState.currentCombatIndex + 1}/${gameState.combatOrder.length}`, 50, 110);
+      this.ctx.fillText(`Combat Turn: ${gameState.currentCombatIndex + 1}/${gameState.combatOrder.length}`, 50 * scale, 110 * scale);
       if (gameState.selectedAttacker) {
-        this.ctx.fillText('Select target to attack', 50, 140);
+        this.ctx.fillText('Select target to attack', 50 * scale, 140 * scale);
       } else {
-        this.ctx.fillText('Select your unit to attack', 50, 140);
+        this.ctx.fillText('Select your unit to attack', 50 * scale, 140 * scale);
       }
     }
 
     // Draw cardbacks at top of UI in 3-column layout (these ARE the decks)
-    const cardbackWidth = 304 * 1.02; // 2% större
-    const cardbackHeight = 487 * 1.02; // 2% större
-    const cardbackSpacing = 10;
-    const cardbackStartY = 50;
+    const cardbackWidth = getCardWidth() * 1.02;
+    const cardbackHeight = getCardHeight() * 1.02;
+    const cardbackSpacing = 10 * scale;
+    const cardbackStartY = 50 * scale;
     const totalCardbackWidth = cardbackWidth * 3 + cardbackSpacing * 2;
     const cardbackStartX = uiX + (uiWidth - totalCardbackWidth) / 2;
     
@@ -136,19 +138,19 @@ export class GameUI {
       
       // Show card count on top of cardback - same shadow style as hex numbers
       this.ctx.fillStyle = 'white';
-      this.ctx.font = '700 24px "Smooch Sans", sans-serif';
+      this.ctx.font = `700 ${24 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 20;
-      this.ctx.shadowOffsetX = 4;
-      this.ctx.shadowOffsetY = 4;
+      this.ctx.shadowBlur = 20 * scale;
+      this.ctx.shadowOffsetX = 4 * scale;
+      this.ctx.shadowOffsetY = 4 * scale;
       const humanText = `${gameState.humanDeck.length} cards`;
       const humanTextWidth = this.ctx.measureText(humanText).width;
       // Use base position so text doesn't move with hover scale
       const humanTextX = cardbackStartX + (cardbackWidth - humanTextWidth) / 2;
-      const humanTextY = cardbackStartY + cardbackHeight - 25; // Moved up 10px (was -15)
+      const humanTextY = cardbackStartY + cardbackHeight - 25 * scale;
       // Add stroke outline like hex numbers
       this.ctx.strokeStyle = 'black';
-      this.ctx.lineWidth = 6;
+      this.ctx.lineWidth = 6 * scale;
       this.ctx.strokeText(humanText, humanTextX, humanTextY);
       this.ctx.fillText(humanText, humanTextX, humanTextY);
       this.ctx.shadowColor = 'transparent';
@@ -193,19 +195,19 @@ export class GameUI {
       
       // Show card count on top of cardback - same shadow style as hex numbers
       this.ctx.fillStyle = 'white';
-      this.ctx.font = '700 24px "Smooch Sans", sans-serif';
+      this.ctx.font = `700 ${24 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 20;
-      this.ctx.shadowOffsetX = 4;
-      this.ctx.shadowOffsetY = 4;
+      this.ctx.shadowBlur = 20 * scale;
+      this.ctx.shadowOffsetX = 4 * scale;
+      this.ctx.shadowOffsetY = 4 * scale;
       const alienText = `${gameState.alienDeck.length} cards`;
       const alienTextWidth = this.ctx.measureText(alienText).width;
       // Use base position so text doesn't move with hover scale
       const alienTextX = baseX + (cardbackWidth - alienTextWidth) / 2;
-      const alienTextY = cardbackStartY + cardbackHeight - 25; // Moved up 10px
+      const alienTextY = cardbackStartY + cardbackHeight - 25 * scale;
       // Add stroke outline like hex numbers
       this.ctx.strokeStyle = 'black';
-      this.ctx.lineWidth = 6;
+      this.ctx.lineWidth = 6 * scale;
       this.ctx.strokeText(alienText, alienTextX, alienTextY);
       this.ctx.fillText(alienText, alienTextX, alienTextY);
       this.ctx.shadowColor = 'transparent';
@@ -250,19 +252,19 @@ export class GameUI {
       
       // Show card count on top of cardback - same shadow style as hex numbers
       this.ctx.fillStyle = 'white';
-      this.ctx.font = '700 24px "Smooch Sans", sans-serif';
+      this.ctx.font = `700 ${24 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 20;
-      this.ctx.shadowOffsetX = 4;
-      this.ctx.shadowOffsetY = 4;
+      this.ctx.shadowBlur = 20 * scale;
+      this.ctx.shadowOffsetX = 4 * scale;
+      this.ctx.shadowOffsetY = 4 * scale;
       const eventText = `${gameState.eventDeck.length} cards`;
       const eventTextWidth = this.ctx.measureText(eventText).width;
       // Use base position so text doesn't move with hover scale
       const eventTextX = baseX + (cardbackWidth - eventTextWidth) / 2;
-      const eventTextY = cardbackStartY + cardbackHeight - 25; // Moved up 10px
+      const eventTextY = cardbackStartY + cardbackHeight - 25 * scale;
       // Add stroke outline like hex numbers
       this.ctx.strokeStyle = 'black';
-      this.ctx.lineWidth = 6;
+      this.ctx.lineWidth = 6 * scale;
       this.ctx.strokeText(eventText, eventTextX, eventTextY);
       this.ctx.fillText(eventText, eventTextX, eventTextY);
       this.ctx.shadowColor = 'transparent';
@@ -271,14 +273,14 @@ export class GameUI {
       this.ctx.shadowOffsetY = 0;
     }
 
-    const deckX = uiX + 10;
-    const deckWidth = uiWidth - 20;
-    const deckStartY = cardbackStartY + cardbackHeight + 20;
+    const deckX = uiX + 10 * scale;
+    const deckWidth = uiWidth - 20 * scale;
+    const deckStartY = cardbackStartY + cardbackHeight + 20 * scale;
 
     // Drawn event card - render it properly like other cards (but not if player is "holding" it for targeting)
     if (gameState.drawnEvent && !gameState.eventTargetMode) {
-      const eventCardWidth = 274; // Same as drawn cards
-      const eventCardHeight = 438;
+      const eventCardWidth = getSmallCardWidth();
+      const eventCardHeight = getSmallCardHeight();
       const eventCardX = deckX + (deckWidth - eventCardWidth) / 2; // Center it
       const eventCardY = deckStartY;
 
@@ -328,13 +330,13 @@ export class GameUI {
       this.ctx.shadowBlur = 0;
 
       // Skip button below the event card
-      const skipY = eventCardY + eventCardHeight + 20; // Flyttad upp 10px (var +30)
+      const skipY = eventCardY + eventCardHeight + 20 * scale;
       const skipButton = this.cardRenderer['assetLoader'].getAsset('skipButton');
-      
+
       if (skipButton && skipButton.complete) {
         // Use skip button image with original aspect ratio, 50% larger
         const originalAspect = skipButton.width / skipButton.height;
-        const skipHeight = 180; // 50% större än 120
+        const skipHeight = 180 * scale;
         const skipWidth = skipHeight * originalAspect;
         const skipX = deckX + (deckWidth - skipWidth) / 2; // Center it
         
@@ -347,41 +349,41 @@ export class GameUI {
         
         // Apply black shadow - much darker and more visible
         this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-        this.ctx.shadowBlur = 40;
-        this.ctx.shadowOffsetX = 8;
-        this.ctx.shadowOffsetY = 8;
-        
+        this.ctx.shadowBlur = 40 * scale;
+        this.ctx.shadowOffsetX = 8 * scale;
+        this.ctx.shadowOffsetY = 8 * scale;
+
         this.ctx.drawImage(skipButton, scaledSkipX, scaledSkipY, scaledSkipWidth, scaledSkipHeight);
-        
+
         // Reset shadow
         this.ctx.shadowColor = 'transparent';
         this.ctx.shadowBlur = 0;
-        
+
         // Draw skip count on the button with black shadow like hex numbers
         // Apply hover scale to text size too
-        const baseFontSize = 20;
+        const baseFontSize = 20 * scale;
         const scaledFontSize = baseFontSize * hoverScale;
         this.ctx.font = `bold ${scaledFontSize}px Quicksand, sans-serif`;
-        
+
         this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-        this.ctx.shadowBlur = 20;
-        this.ctx.shadowOffsetX = 4;
-        this.ctx.shadowOffsetY = 4;
-        
+        this.ctx.shadowBlur = 20 * scale;
+        this.ctx.shadowOffsetX = 4 * scale;
+        this.ctx.shadowOffsetY = 4 * scale;
+
         // Black stroke outline
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 6;
+        this.ctx.lineWidth = 6 * scale;
         const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
         const skipText = `Skip: (${skips})`;
         const skipTextWidth = this.ctx.measureText(skipText).width;
         const textX = skipX + (skipWidth - skipTextWidth) / 2;
-        const textY = skipY + 89; // Flyttad ner 2px (var 87)
+        const textY = skipY + 89 * scale;
         this.ctx.strokeText(skipText, textX, textY);
-        
+
         // Then fill with white
         this.ctx.fillStyle = 'white';
         this.ctx.fillText(skipText, textX, textY);
-        
+
         // Reset shadow and stroke
         this.ctx.shadowColor = 'transparent';
         this.ctx.shadowBlur = 0;
@@ -391,13 +393,13 @@ export class GameUI {
         // Fallback to gray rectangle
         const skipColor = gameState.hoverSkip ? 'darkgray' : 'gray';
         this.ctx.fillStyle = skipColor;
-        const skipWidth = 70;
-        this.ctx.fillRect(deckX, skipY, skipWidth, 30);
+        const skipWidthFallback = 70 * scale;
+        this.ctx.fillRect(deckX, skipY, skipWidthFallback, 30 * scale);
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '14px Quicksand, sans-serif';
+        this.ctx.font = `${14 * scale}px Quicksand, sans-serif`;
         const skips = gameState.currentPlayer === 'human' ? gameState.humanEventSkips : gameState.alienEventSkips;
-        this.ctx.fillText('Skip', deckX + 10, skipY + 18);
-        this.ctx.fillText(`(${skips})`, deckX + skipWidth + 5, skipY + 18);
+        this.ctx.fillText('Skip', deckX + 10 * scale, skipY + 18 * scale);
+        this.ctx.fillText(`(${skips})`, deckX + skipWidthFallback + 5 * scale, skipY + 18 * scale);
       }
     }
 
@@ -406,12 +408,12 @@ export class GameUI {
     // Render drawn cards in 3-column grid
     if (gameState.drawnCards.length > 0) {
       const cardsPerRow = 3;
-      const cardSpacing = 21;
-      const cardWidth = 274; // 90% of 304
-      const cardHeight = 438; // 90% of 487
+      const cardSpacing = 21 * scale;
+      const cardWidth = getSmallCardWidth();
+      const cardHeight = getSmallCardHeight();
       const totalCardsWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * cardSpacing;
       const cardStartX = uiX + (uiWidth - totalCardsWidth) / 2; // Center the cards
-      const cardStartY = deckStartY + 170;
+      const cardStartY = deckStartY + 170 * scale;
 
       // First pass: render all non-hovered cards
       for (let i = 0; i < gameState.drawnCards.length; i++) {
@@ -478,7 +480,7 @@ export class GameUI {
 
     // Draw cursor dot if holding a card
     if (gameState.selectedCard !== undefined) {
-      const boardWidth = this.canvas.width * 0.6;
+      const boardWidth = window.innerWidth * 0.6;
       const isOverBoard = gameState.mouseX < boardWidth;
       
       // Determine target scale based on location
@@ -510,9 +512,9 @@ export class GameUI {
       }
       
       // Use current scale for rendering
-      const currentScale = gameState.previewScale ?? 1.0;
-      const previewWidth = 200 * currentScale;
-      const previewHeight = 320 * currentScale;
+      const currentAnimScale = gameState.previewScale ?? 1.0;
+      const previewWidth = 200 * scale * currentAnimScale;
+      const previewHeight = 320 * scale * currentAnimScale;
       const previewX = gameState.mouseX - previewWidth / 2;
       const previewY = gameState.mouseY - previewHeight * 0.3;
       this.cardRenderer.renderFrameAndCharacter(this.ctx, gameState.selectedCard, previewX, previewY, previewWidth, previewHeight);
@@ -520,7 +522,7 @@ export class GameUI {
 
     // Draw event card following mouse when in event target mode (but not during swap confirm)
     if (gameState.eventTargetMode && gameState.drawnEvent && !gameState.swapConfirmMode) {
-      const boardWidth = this.canvas.width * 0.6;
+      const boardWidth = window.innerWidth * 0.6;
       const isOverBoard = gameState.mouseX < boardWidth;
 
       // Determine target scale based on location
@@ -549,9 +551,9 @@ export class GameUI {
         }
       }
 
-      const currentScale = gameState.previewScale ?? 1.0;
-      const previewWidth = 200 * currentScale;
-      const previewHeight = 320 * currentScale;
+      const currentAnimScale = gameState.previewScale ?? 1.0;
+      const previewWidth = 200 * scale * currentAnimScale;
+      const previewHeight = 320 * scale * currentAnimScale;
       const previewX = gameState.mouseX - previewWidth / 2;
       const previewY = gameState.mouseY - previewHeight * 0.3;
       this.cardRenderer.renderCard(this.ctx, gameState.drawnEvent, previewX, previewY, previewWidth, previewHeight);
@@ -559,20 +561,20 @@ export class GameUI {
 
     // Autoplace button (for testing - remove later)
     if (gameState.phase === 'placement' && (gameState.humanDeck.length > 0 || gameState.alienDeck.length > 0)) {
-      const autoButtonWidth = 200;
-      const autoButtonHeight = 50;
-      const autoButtonX = boardWidth - autoButtonWidth - 20;
-      const autoButtonY = 20;
+      const autoButtonWidth = 200 * scale;
+      const autoButtonHeight = 50 * scale;
+      const autoButtonX = boardWidth - autoButtonWidth - 20 * scale;
+      const autoButtonY = 20 * scale;
 
       this.ctx.fillStyle = '#4a4a4a';
       this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 2;
-      this.roundedRect(this.ctx, autoButtonX, autoButtonY, autoButtonWidth, autoButtonHeight, 8);
+      this.ctx.lineWidth = 2 * scale;
+      this.roundedRect(this.ctx, autoButtonX, autoButtonY, autoButtonWidth, autoButtonHeight, 8 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = 'bold 18px Quicksand, sans-serif';
+      this.ctx.font = `bold ${18 * scale}px Quicksand, sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('AUTOPLACE ALL', autoButtonX + autoButtonWidth / 2, autoButtonY + autoButtonHeight / 2);
@@ -582,22 +584,22 @@ export class GameUI {
 
     // "What just happened?" button - under autoplace button
     if (gameState.phase === 'placement' && gameState.eventHistory.length > 0) {
-      const historyButtonWidth = 200;
-      const historyButtonHeight = 50;
-      const historyButtonX = boardWidth - historyButtonWidth - 20;
-      const historyButtonY = 80; // Below autoplace button (20 + 50 + 10)
+      const historyButtonWidth = 200 * scale;
+      const historyButtonHeight = 50 * scale;
+      const historyButtonX = boardWidth - historyButtonWidth - 20 * scale;
+      const historyButtonY = 80 * scale;
 
       const isHovered = gameState.hoverEventHistoryButton || false;
 
       this.ctx.fillStyle = isHovered ? '#5a5a5a' : '#4a4a4a';
       this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 2;
-      this.roundedRect(this.ctx, historyButtonX, historyButtonY, historyButtonWidth, historyButtonHeight, 8);
+      this.ctx.lineWidth = 2 * scale;
+      this.roundedRect(this.ctx, historyButtonX, historyButtonY, historyButtonWidth, historyButtonHeight, 8 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.font = 'bold 16px Quicksand, sans-serif';
+      this.ctx.font = `bold ${16 * scale}px Quicksand, sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText('What just happened?', historyButtonX + historyButtonWidth / 2, historyButtonY + historyButtonHeight / 2);
@@ -608,33 +610,33 @@ export class GameUI {
     // Battle button if all cards are placed
     if (game && game.allCardsPlaced && game.allCardsPlaced() && gameState.phase === 'placement') {
       console.log('Showing battle button');
-      const buttonWidth = 300;
-      const buttonHeight = 80;
+      const buttonWidth = 300 * scale;
+      const buttonHeight = 80 * scale;
       const buttonX = uiX + (uiWidth - buttonWidth) / 2;
-      const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+      const buttonY = window.innerHeight / 2 - buttonHeight / 2;
 
       // Draw button background with hover effect
       this.ctx.fillStyle = gameState.hoverBattleButton ? '#6B0A0A' : '#8B1A1A';
       this.ctx.strokeStyle = '#F0D4A8';
-      this.ctx.lineWidth = 4;
-      this.roundedRect(this.ctx, buttonX, buttonY, buttonWidth, buttonHeight, 10);
+      this.ctx.lineWidth = 4 * scale;
+      this.roundedRect(this.ctx, buttonX, buttonY, buttonWidth, buttonHeight, 10 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       // Draw button text
       this.ctx.fillStyle = '#F0D4A8';
-      this.ctx.font = 'bold 36px "Smooch Sans", sans-serif';
+      this.ctx.font = `bold ${36 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
-      
+
       // Add shadow to text
       this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 10;
-      this.ctx.shadowOffsetX = 3;
-      this.ctx.shadowOffsetY = 3;
-      
+      this.ctx.shadowBlur = 10 * scale;
+      this.ctx.shadowOffsetX = 3 * scale;
+      this.ctx.shadowOffsetY = 3 * scale;
+
       this.ctx.fillText('BATTLE!', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
-      
+
       // Reset shadow
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
@@ -646,37 +648,37 @@ export class GameUI {
 
     // Swap confirmation button
     if (gameState.swapConfirmMode) {
-      const boardWidth = this.canvas.width * 0.6;
-      const buttonWidth = 300;
-      const buttonHeight = 70;
+      const boardWidth = window.innerWidth * 0.6;
+      const buttonWidth = 300 * scale;
+      const buttonHeight = 70 * scale;
       const buttonX = (boardWidth - buttonWidth) / 2;
-      const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+      const buttonY = window.innerHeight / 2 - buttonHeight / 2;
 
       // Draw button background with orange neon style
       this.ctx.save();
       this.ctx.shadowColor = '#FF6600';
-      this.ctx.shadowBlur = 20;
+      this.ctx.shadowBlur = 20 * scale;
       this.ctx.fillStyle = gameState.hoverSwapConfirm ? '#FF8800' : '#FF6600';
       this.ctx.strokeStyle = '#FFAA00';
-      this.ctx.lineWidth = 3;
-      this.roundedRect(this.ctx, buttonX, buttonY, buttonWidth, buttonHeight, 10);
+      this.ctx.lineWidth = 3 * scale;
+      this.roundedRect(this.ctx, buttonX, buttonY, buttonWidth, buttonHeight, 10 * scale);
       this.ctx.fill();
       this.ctx.stroke();
       this.ctx.restore();
 
       // Draw button text
       this.ctx.fillStyle = '#FFFFFF';
-      this.ctx.font = 'bold 28px "Smooch Sans", sans-serif';
+      this.ctx.font = `bold ${28 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowBlur = 5;
+      this.ctx.shadowBlur = 5 * scale;
       this.ctx.fillText('Swap places?', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
 
       // Instruction text below
-      this.ctx.font = '16px "Quicksand", sans-serif';
+      this.ctx.font = `${16 * scale}px "Quicksand", sans-serif`;
       this.ctx.fillStyle = '#CCCCCC';
-      this.ctx.fillText('Click to confirm, right-click to cancel', buttonX + buttonWidth / 2, buttonY + buttonHeight + 25);
+      this.ctx.fillText('Click to confirm, right-click to cancel', buttonX + buttonWidth / 2, buttonY + buttonHeight + 25 * scale);
 
       // Reset
       this.ctx.shadowColor = 'transparent';
@@ -687,43 +689,43 @@ export class GameUI {
 
     // Battle log modal in center of board
     if (gameState.phase === 'battleLog') {
-      const boardWidth = this.canvas.width * 0.6;
-      const modalWidth = 600 * 2.5; // mycket bredare
-      const modalHeight = 400 * 2.2 * 1.1;
+      const boardWidth = window.innerWidth * 0.6;
+      const modalWidth = 600 * 2.5 * scale;
+      const modalHeight = 400 * 2.2 * 1.1 * scale;
       const modalX = (boardWidth - modalWidth) / 2;
-      const modalY = (this.canvas.height - modalHeight) / 2;
+      const modalY = (window.innerHeight - modalHeight) / 2;
 
       // Draw semi-transparent backdrop
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
+      this.ctx.fillRect(0, 0, boardWidth, window.innerHeight);
 
       // Draw modal background
       this.ctx.fillStyle = '#2a1810';
       this.ctx.strokeStyle = '#F0D4A8';
-      this.ctx.lineWidth = 6;
-      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 20);
+      this.ctx.lineWidth = 6 * scale;
+      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 20 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       // Draw title
       this.ctx.fillStyle = '#F0D4A8';
-      this.ctx.font = 'bold 48px "Smooch Sans", sans-serif';
+      this.ctx.font = `bold ${48 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
-      this.ctx.shadowBlur = 10;
-      this.ctx.shadowOffsetX = 3;
-      this.ctx.shadowOffsetY = 3;
-      this.ctx.fillText('BATTLE LOG', modalX + modalWidth / 2, modalY + 70);
+      this.ctx.shadowBlur = 10 * scale;
+      this.ctx.shadowOffsetX = 3 * scale;
+      this.ctx.shadowOffsetY = 3 * scale;
+      this.ctx.fillText('BATTLE LOG', modalX + modalWidth / 2, modalY + 70 * scale);
 
       // Draw log lines
-      this.ctx.font = '19px Quicksand, sans-serif';
+      this.ctx.font = `${19 * scale}px Quicksand, sans-serif`;
       this.ctx.textAlign = 'left';
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
-      let y = modalY + 120;
-      const lineHeight = 32;
-      const colWidth = (modalWidth - 60) / 2;
+      let y = modalY + 120 * scale;
+      const lineHeight = 32 * scale;
+      const colWidth = (modalWidth - 60 * scale) / 2;
       let col = 0;
       let linesDrawn = 0;
 
@@ -773,13 +775,13 @@ export class GameUI {
       if (gameState.battleLog) {
         for (const line of gameState.battleLog) {
           this.ctx.fillStyle = getLogColor(line);
-          this.ctx.fillText(line, modalX + 30 + col * colWidth, y);
+          this.ctx.fillText(line, modalX + 30 * scale + col * colWidth, y);
           y += lineHeight;
           linesDrawn++;
           // Om vi når botten av första kolumnen, byt till nästa
-          if (y > modalY + modalHeight - 40) {
+          if (y > modalY + modalHeight - 40 * scale) {
             col++;
-            y = modalY + 120;
+            y = modalY + 120 * scale;
           }
         }
       }
@@ -789,21 +791,21 @@ export class GameUI {
       this.ctx.textBaseline = 'alphabetic';
 
         // Draw 'Continue' button at the bottom center of the modal
-        const continueBtnWidth = 260;
-        const continueBtnHeight = 60;
+        const continueBtnWidth = 260 * scale;
+        const continueBtnHeight = 60 * scale;
         const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-        const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+        const continueBtnY = modalY + modalHeight - continueBtnHeight - 20 * scale;
         // Button background
         this.ctx.fillStyle = gameState.hoverContinueButton ? '#3A7A2A' : '#4CAF50';
-        this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 12);
+        this.roundedRect(this.ctx, continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight, 12 * scale);
         this.ctx.fill();
         // Button text
-        this.ctx.font = 'bold 32px "Smooch Sans", sans-serif';
+        this.ctx.font = `bold ${32 * scale}px "Smooch Sans", sans-serif`;
         this.ctx.fillStyle = '#F0D4A8';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.shadowBlur = 6;
+        this.ctx.shadowBlur = 6 * scale;
         this.ctx.fillText('Continue', continueBtnX + continueBtnWidth / 2, continueBtnY + continueBtnHeight / 2);
         // Reset shadow
         this.ctx.shadowColor = 'transparent';
@@ -814,47 +816,47 @@ export class GameUI {
 
     // Event History modal
     if (gameState.showEventHistory && gameState.eventHistory.length > 0) {
-      const boardWidth = this.canvas.width * 0.6;
-      const modalWidth = 500;
-      const modalHeight = Math.min(400, 100 + gameState.eventHistory.length * 30);
+      const boardWidth = window.innerWidth * 0.6;
+      const modalWidth = 500 * scale;
+      const modalHeight = Math.min(400 * scale, (100 + gameState.eventHistory.length * 30) * scale);
       const modalX = (boardWidth - modalWidth) / 2;
-      const modalY = (this.canvas.height - modalHeight) / 2;
+      const modalY = (window.innerHeight - modalHeight) / 2;
 
       // Draw semi-transparent backdrop
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      this.ctx.fillRect(0, 0, boardWidth, this.canvas.height);
+      this.ctx.fillRect(0, 0, boardWidth, window.innerHeight);
 
       // Draw modal background
       this.ctx.fillStyle = '#2a1810';
       this.ctx.strokeStyle = '#F0D4A8';
-      this.ctx.lineWidth = 4;
-      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 15);
+      this.ctx.lineWidth = 4 * scale;
+      this.roundedRect(this.ctx, modalX, modalY, modalWidth, modalHeight, 15 * scale);
       this.ctx.fill();
       this.ctx.stroke();
 
       // Draw title
       this.ctx.fillStyle = '#F0D4A8';
-      this.ctx.font = 'bold 32px "Smooch Sans", sans-serif';
+      this.ctx.font = `bold ${32 * scale}px "Smooch Sans", sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowOffsetX = 2;
-      this.ctx.shadowOffsetY = 2;
-      this.ctx.fillText('What just happened?', modalX + modalWidth / 2, modalY + 40);
+      this.ctx.shadowBlur = 8 * scale;
+      this.ctx.shadowOffsetX = 2 * scale;
+      this.ctx.shadowOffsetY = 2 * scale;
+      this.ctx.fillText('What just happened?', modalX + modalWidth / 2, modalY + 40 * scale);
 
       // Draw event history lines
-      this.ctx.font = '18px Quicksand, sans-serif';
+      this.ctx.font = `${18 * scale}px Quicksand, sans-serif`;
       this.ctx.fillStyle = '#F0D4A8';
       this.ctx.textAlign = 'left';
       this.ctx.shadowColor = 'transparent';
       this.ctx.shadowBlur = 0;
 
-      let yPos = modalY + 80;
-      const lineHeight = 28;
+      let yPos = modalY + 80 * scale;
+      const lineHeight = 28 * scale;
 
       for (const event of gameState.eventHistory.slice(-10)) { // Show last 10 events
-        this.ctx.fillText(event, modalX + 20, yPos);
+        this.ctx.fillText(event, modalX + 20 * scale, yPos);
         yPos += lineHeight;
       }
 

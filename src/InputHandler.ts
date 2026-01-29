@@ -1,5 +1,7 @@
 // InputHandler class for mouse clicks
 
+import { getScale, getHexSize, getCardWidth, getCardHeight, getSmallCardWidth, getSmallCardHeight } from './Scale';
+
 export class InputHandler {
   private canvas: HTMLCanvasElement;
   private game: any;
@@ -10,6 +12,15 @@ export class InputHandler {
     this.canvas.addEventListener('click', this.handleClick.bind(this));
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
+  }
+
+  // Get CSS dimensions (not physical pixels) for mouse coordinate matching
+  private getCSSWidth(): number {
+    return this.canvas.getBoundingClientRect().width;
+  }
+
+  private getCSSHeight(): number {
+    return this.canvas.getBoundingClientRect().height;
   }
 
   private handleMouseMove(event: MouseEvent) {
@@ -30,15 +41,16 @@ export class InputHandler {
     this.game.state.hoverBattleButton = false;
     this.game.state.hoverEventHistoryButton = false;
 
-    const boardWidth = this.canvas.width * 0.6;
+    const boardWidth = this.getCSSWidth() * 0.6;
     const uiX = boardWidth; // Right 40% starts here
 
     // Check for event history button hover
+    const scale = getScale();
     if (this.game.state.phase === 'placement' && this.game.state.eventHistory.length > 0) {
-      const historyButtonWidth = 200;
-      const historyButtonHeight = 50;
-      const historyButtonX = boardWidth - historyButtonWidth - 20;
-      const historyButtonY = 80;
+      const historyButtonWidth = 200 * scale;
+      const historyButtonHeight = 50 * scale;
+      const historyButtonX = boardWidth - historyButtonWidth - 20 * scale;
+      const historyButtonY = 80 * scale;
 
       if (x >= historyButtonX && x < historyButtonX + historyButtonWidth &&
           y >= historyButtonY && y < historyButtonY + historyButtonHeight) {
@@ -50,11 +62,11 @@ export class InputHandler {
       // UI area (right 40%)
       // Check for Battle button hover
       if (this.game.state.phase === 'placement' && (this.game as any).allCardsPlaced && (this.game as any).allCardsPlaced()) {
-        const buttonWidth = 300;
-        const buttonHeight = 80;
-        const uiWidth = this.canvas.width - boardWidth;
+        const buttonWidth = 300 * scale;
+        const buttonHeight = 80 * scale;
+        const uiWidth = this.getCSSWidth() - boardWidth;
         const buttonX = uiX + (uiWidth - buttonWidth) / 2;
-        const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+        const buttonY = this.getCSSHeight() / 2 - buttonHeight / 2;
 
         if (x >= buttonX && x < buttonX + buttonWidth && y >= buttonY && y < buttonY + buttonHeight) {
           this.game.state.hoverBattleButton = true;
@@ -63,10 +75,10 @@ export class InputHandler {
 
       // Swap confirm button hover
       if (this.game.state.swapConfirmMode) {
-        const swapButtonWidth = 300;
-        const swapButtonHeight = 70;
+        const swapButtonWidth = 300 * scale;
+        const swapButtonHeight = 70 * scale;
         const swapButtonX = (boardWidth - swapButtonWidth) / 2;
-        const swapButtonY = this.canvas.height / 2 - swapButtonHeight / 2;
+        const swapButtonY = this.getCSSHeight() / 2 - swapButtonHeight / 2;
 
         if (x >= swapButtonX && x < swapButtonX + swapButtonWidth && y >= swapButtonY && y < swapButtonY + swapButtonHeight) {
           this.game.state.hoverSwapConfirm = true;
@@ -79,14 +91,14 @@ export class InputHandler {
 
         // Battle log 'Continue' button hover
         if (this.game.state.phase === 'battleLog') {
-          const modalWidth = 600 * 2.5;
-          const modalHeight = 400 * 2.2 * 1.1;
+          const modalWidth = 600 * 2.5 * scale;
+          const modalHeight = 400 * 2.2 * 1.1 * scale;
           const modalX = (boardWidth - modalWidth) / 2;
-          const modalY = (this.canvas.height - modalHeight) / 2;
-          const continueBtnWidth = 260;
-          const continueBtnHeight = 60;
+          const modalY = (this.getCSSHeight() - modalHeight) / 2;
+          const continueBtnWidth = 260 * scale;
+          const continueBtnHeight = 60 * scale;
           const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-          const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+          const continueBtnY = modalY + modalHeight - continueBtnHeight - 20 * scale;
           if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
             this.game.state.hoverContinueButton = true;
           } else {
@@ -95,14 +107,14 @@ export class InputHandler {
         }
 
       // Cardback dimensions and positions
-      const cardbackWidth = 304 * 1.02;
-      const cardbackHeight = 487 * 1.02;
-      const cardbackSpacing = 10;
-      const cardbackStartY = 50;
-      const uiWidth = this.canvas.width - boardWidth;
+      const cardbackWidth = getCardWidth() * 1.02;
+      const cardbackHeight = getCardHeight() * 1.02;
+      const cardbackSpacing = 10 * scale;
+      const cardbackStartY = 50 * scale;
+      const uiWidth = this.getCSSWidth() - boardWidth;
       const totalCardbackWidth = cardbackWidth * 3 + cardbackSpacing * 2;
       const cardbackStartX = uiX + (uiWidth - totalCardbackWidth) / 2;
-      
+
       // Check hover on cardbacks
       if (y >= cardbackStartY && y < cardbackStartY + cardbackHeight) {
         // Human cardback
@@ -119,45 +131,45 @@ export class InputHandler {
         }
       }
       
-      const deckStartY = cardbackStartY + cardbackHeight + 20;
-      
+      const deckStartY = cardbackStartY + cardbackHeight + 20 * scale;
+
       // Event card hover detection (now a full card, not just a rectangle)
-      const eventCardWidth = 274;
-      const eventCardHeight = 438;
-      const deckX = uiX + 10; // Match GameUI
-      const deckWidth = uiWidth - 20; // Match GameUI
+      const eventCardWidth = getSmallCardWidth();
+      const eventCardHeight = getSmallCardHeight();
+      const deckX = uiX + 10 * scale; // Match GameUI
+      const deckWidth = uiWidth - 20 * scale; // Match GameUI
       const eventCardX = deckX + (deckWidth - eventCardWidth) / 2;
       const eventCardY = deckStartY;
-      const skipY = eventCardY + eventCardHeight + 20;
+      const skipY = eventCardY + eventCardHeight + 20 * scale;
       // Calculate skip button dimensions to match GameUI exactly
-      const skipHeight = 180;
+      const skipHeight = 180 * scale;
       // Use actual aspect ratio based on loaded image if available
       const skipButtonImg = (this.game as any).ui?.cardRenderer?.assetLoader?.getAsset('skipButton');
-      
+
       // Get real dimensions from GameUI if available, otherwise use correct fallback (1536x1024 = 1.5)
-      let skipWidth = 180 * 1.5; // Correct aspect ratio
+      let skipWidth = 180 * 1.5 * scale; // Correct aspect ratio
       if (skipButtonImg && skipButtonImg.complete && skipButtonImg.width > 0) {
         skipWidth = skipHeight * (skipButtonImg.width / skipButtonImg.height);
       }
       const skipX = deckX + (deckWidth - skipWidth) / 2; // Match GameUI
-      
+
       // Tighter vertical bounds for click detection (skip decorative parts)
-      const skipHitHeight = 140;
+      const skipHitHeight = 140 * scale;
       const skipHitY = skipY + (skipHeight - skipHitHeight) / 2;
-      
+
       if (x >= eventCardX && x < eventCardX + eventCardWidth && y >= eventCardY && y < eventCardY + eventCardHeight && this.game.state.drawnEvent) {
         this.game.state.hoverDrawnEvent = true;
       } else if (x >= skipX && x < skipX + skipWidth && y >= skipHitY && y < skipHitY + skipHitHeight && this.game.state.drawnEvent) {
         this.game.state.hoverSkip = true;
-      } else if (y > deckStartY + 100) {
+      } else if (y > deckStartY + 100 * scale) {
         // Drawn cards in 3-card grid (hover detection)
-        const cardWidth = 274; // 90% of 304
-        const cardHeight = 438; // 90% of 487
+        const cardWidth = getSmallCardWidth();
+        const cardHeight = getSmallCardHeight();
         const cardsPerRow = 3;
-        const spacing = 21;
+        const spacing = 21 * scale;
         const totalCardsWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * spacing;
         const startX = uiX + (uiWidth - totalCardsWidth) / 2;
-        const startY = deckStartY + 170;
+        const startY = deckStartY + 170 * scale;
 
         for (let i = 0; i < this.game.state.drawnCards.length; i++) {
           const row = Math.floor(i / cardsPerRow);
@@ -195,16 +207,17 @@ export class InputHandler {
     // If an event is pending, only allow resolve/skip clicks
     const hasEvent = this.game.state.drawnEvent !== undefined;
 
-    const boardWidth = this.canvas.width * 0.6;
+    const boardWidth = this.getCSSWidth() * 0.6;
     const uiX = boardWidth;
+    const scale = getScale();
 
     // Check for event history modal - if open, close on outside click
     if (this.game.state.showEventHistory) {
-      const modalWidth = 500;
+      const modalWidth = 500 * scale;
       const eventHistoryLength = this.game.state.eventHistory.length;
-      const modalHeight = Math.min(400, 100 + eventHistoryLength * 30);
+      const modalHeight = Math.min(400 * scale, (100 + eventHistoryLength * 30) * scale);
       const modalX = (boardWidth - modalWidth) / 2;
-      const modalY = (this.canvas.height - modalHeight) / 2;
+      const modalY = (this.getCSSHeight() - modalHeight) / 2;
 
       // Check if click is inside modal
       const clickInsideModal = x >= modalX && x < modalX + modalWidth &&
@@ -222,10 +235,10 @@ export class InputHandler {
 
     // Check for swap confirm button click
     if (this.game.state.swapConfirmMode) {
-      const buttonWidth = 300;
-      const buttonHeight = 70;
+      const buttonWidth = 300 * scale;
+      const buttonHeight = 70 * scale;
       const buttonX = (boardWidth - buttonWidth) / 2;
-      const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+      const buttonY = this.getCSSHeight() / 2 - buttonHeight / 2;
 
       if (x >= buttonX && x < buttonX + buttonWidth &&
           y >= buttonY && y < buttonY + buttonHeight) {
@@ -236,10 +249,10 @@ export class InputHandler {
 
     // Check for autoplace button click (testing feature)
     if (this.game.state.phase === 'placement') {
-      const autoButtonWidth = 200;
-      const autoButtonHeight = 50;
-      const autoButtonX = boardWidth - autoButtonWidth - 20;
-      const autoButtonY = 20;
+      const autoButtonWidth = 200 * scale;
+      const autoButtonHeight = 50 * scale;
+      const autoButtonX = boardWidth - autoButtonWidth - 20 * scale;
+      const autoButtonY = 20 * scale;
 
       if (x >= autoButtonX && x < autoButtonX + autoButtonWidth &&
           y >= autoButtonY && y < autoButtonY + autoButtonHeight) {
@@ -249,10 +262,10 @@ export class InputHandler {
 
       // Check for event history button click
       if (this.game.state.eventHistory.length > 0) {
-        const historyButtonWidth = 200;
-        const historyButtonHeight = 50;
-        const historyButtonX = boardWidth - historyButtonWidth - 20;
-        const historyButtonY = 80;
+        const historyButtonWidth = 200 * scale;
+        const historyButtonHeight = 50 * scale;
+        const historyButtonX = boardWidth - historyButtonWidth - 20 * scale;
+        const historyButtonY = 80 * scale;
 
         if (x >= historyButtonX && x < historyButtonX + historyButtonWidth &&
             y >= historyButtonY && y < historyButtonY + historyButtonHeight) {
@@ -264,14 +277,14 @@ export class InputHandler {
 
     // Always check for continue button click if phase is 'battleLog'
     if (this.game.state.phase === 'battleLog') {
-      const modalWidth = 600 * 2.5;
-      const modalHeight = 400 * 2.2 * 1.1;
+      const modalWidth = 600 * 2.5 * scale;
+      const modalHeight = 400 * 2.2 * 1.1 * scale;
       const modalX = (boardWidth - modalWidth) / 2;
-      const modalY = (this.canvas.height - modalHeight) / 2;
-      const continueBtnWidth = 260;
-      const continueBtnHeight = 60;
+      const modalY = (this.getCSSHeight() - modalHeight) / 2;
+      const continueBtnWidth = 260 * scale;
+      const continueBtnHeight = 60 * scale;
       const continueBtnX = modalX + (modalWidth - continueBtnWidth) / 2;
-      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20;
+      const continueBtnY = modalY + modalHeight - continueBtnHeight - 20 * scale;
       console.log('Continue button bounds:', continueBtnX, continueBtnY, continueBtnWidth, continueBtnHeight);
       console.log('Mouse click:', x, y);
       if (x >= continueBtnX && x < continueBtnX + continueBtnWidth && y >= continueBtnY && y < continueBtnY + continueBtnHeight) {
@@ -289,11 +302,11 @@ export class InputHandler {
     if (x > uiX) {
       // Check for Battle button hover and click
       if (this.game.state.phase === 'placement' && (this.game as any).allCardsPlaced && (this.game as any).allCardsPlaced()) {
-        const buttonWidth = 300;
-        const buttonHeight = 80;
-        const uiWidth = this.canvas.width - boardWidth;
+        const buttonWidth = 300 * scale;
+        const buttonHeight = 80 * scale;
+        const uiWidth = this.getCSSWidth() - boardWidth;
         const buttonX = uiX + (uiWidth - buttonWidth) / 2;
-        const buttonY = this.canvas.height / 2 - buttonHeight / 2;
+        const buttonY = this.getCSSHeight() / 2 - buttonHeight / 2;
 
         if (x >= buttonX && x < buttonX + buttonWidth && y >= buttonY && y < buttonY + buttonHeight) {
           this.game.state.hoverBattleButton = true;
@@ -303,14 +316,14 @@ export class InputHandler {
       }
 
       // Cardback dimensions and positions
-      const cardbackWidth = 304 * 1.02;
-      const cardbackHeight = 487 * 1.02;
-      const cardbackSpacing = 10;
-      const cardbackStartY = 50;
-      const uiWidth = this.canvas.width - boardWidth;
+      const cardbackWidth = getCardWidth() * 1.02;
+      const cardbackHeight = getCardHeight() * 1.02;
+      const cardbackSpacing = 10 * scale;
+      const cardbackStartY = 50 * scale;
+      const uiWidth = this.getCSSWidth() - boardWidth;
       const totalCardbackWidth = cardbackWidth * 3 + cardbackSpacing * 2;
       const cardbackStartX = uiX + (uiWidth - totalCardbackWidth) / 2;
-      
+
       // Check clicks on cardbacks
       if (y >= cardbackStartY && y < cardbackStartY + cardbackHeight) {
         // Human cardback
@@ -333,28 +346,28 @@ export class InputHandler {
         }
       }
       
-      const deckStartY = cardbackStartY + cardbackHeight + 20;
-      
+      const deckStartY = cardbackStartY + cardbackHeight + 20 * scale;
+
       // Event card click detection
-      const eventCardWidth = 274;
-      const eventCardHeight = 438;
-      const deckX = uiX + 10; // Match GameUI
-      const deckWidth = uiWidth - 20; // Match GameUI
+      const eventCardWidth = getSmallCardWidth();
+      const eventCardHeight = getSmallCardHeight();
+      const deckX = uiX + 10 * scale; // Match GameUI
+      const deckWidth = uiWidth - 20 * scale; // Match GameUI
       const eventCardX = deckX + (deckWidth - eventCardWidth) / 2;
       const eventCardY = deckStartY;
-      const skipY = eventCardY + eventCardHeight + 20;
-      const skipHeight = 180;
+      const skipY = eventCardY + eventCardHeight + 20 * scale;
+      const skipHeight = 180 * scale;
       // Use actual aspect ratio based on loaded image if available
       const skipButtonImg = (this.game as any).ui?.cardRenderer?.assetLoader?.getAsset('skipButton');
-      const skipWidth = skipButtonImg && skipButtonImg.complete 
+      const skipWidth = skipButtonImg && skipButtonImg.complete
         ? skipHeight * (skipButtonImg.width / skipButtonImg.height)
         : skipHeight * 1.5; // Correct aspect ratio (1536x1024)
       const skipX = deckX + (deckWidth - skipWidth) / 2; // Match GameUI
-      
+
       // Tighter vertical bounds for click detection
-      const skipHitHeight = 140;
+      const skipHitHeight = 140 * scale;
       const skipHitY = skipY + (skipHeight - skipHitHeight) / 2;
-      
+
       // Click on event card to play it
       if (x >= eventCardX && x < eventCardX + eventCardWidth && y >= eventCardY && y < eventCardY + eventCardHeight && this.game.state.drawnEvent) {
         // Play the event
@@ -364,15 +377,15 @@ export class InputHandler {
       else if (x >= skipX && x < skipX + skipWidth && y >= skipHitY && y < skipHitY + skipHitHeight && this.game.state.drawnEvent) {
         // Skip button
         this.game.skipEvent();
-      } else if (y > deckStartY + 100) {
+      } else if (y > deckStartY + 100 * scale) {
         // Drawn cards - handle card selection/placement
-        const cardWidth = 274; // 90% of 304
-        const cardHeight = 438; // 90% of 487
+        const cardWidth = getSmallCardWidth();
+        const cardHeight = getSmallCardHeight();
         const cardsPerRow = 3;
-        const spacing = 21;
+        const spacing = 21 * scale;
         const totalCardsWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * spacing;
         const startX = uiX + (uiWidth - totalCardsWidth) / 2;
-        const startY = deckStartY + 170;
+        const startY = deckStartY + 170 * scale;
 
         for (let i = 0; i < this.game.state.drawnCards.length; i++) {
           const row = Math.floor(i / cardsPerRow);
@@ -464,11 +477,11 @@ export class InputHandler {
   }
 
   private hexToPixel(q: number, r: number): { x: number; y: number } {
-    const hexSize = 100; // Must match Board.ts hexSize
+    const hexSize = getHexSize(); // Dynamic hex size based on screen
     const x = hexSize * (3/2 * q);
     const y = hexSize * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-    const boardWidth = this.canvas.width * 0.6; // Left 60%
-    const boardHeight = this.canvas.height;
+    const boardWidth = this.getCSSWidth() * 0.6; // Left 60%
+    const boardHeight = this.getCSSHeight();
     return { x: x + boardWidth / 2, y: y + boardHeight / 2 };
   }
 }
