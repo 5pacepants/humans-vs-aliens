@@ -3,16 +3,30 @@
 import type { CharacterCard, EventCard } from './types';
 import { CardAssetLoader } from './CardAssetLoader';
 
+// Glitter particle for sparkle effect
+interface GlitterParticle {
+  x: number;
+  y: number;
+  size: number;
+  phase: number;     // Animation phase offset
+  speed: number;     // Animation speed
+  brightness: number; // 0-1
+}
+
 export class CardRenderer {
   private assetLoader: CardAssetLoader;
   private offscreenCanvas: HTMLCanvasElement;
   private offscreenCtx: CanvasRenderingContext2D;
   private readonly SUPERSAMPLING_SCALE = 4; // 4x rendering for better quality when downscaling high-res images
 
+  // Glitter particles cache per card (using card id as key)
+  private glitterParticles: Map<string, GlitterParticle[]> = new Map();
+  private readonly GLITTER_PARTICLE_COUNT = 12;
+
   constructor() {
     this.assetLoader = new CardAssetLoader();
     this.assetLoader.preloadAll();
-    
+
     // Create offscreen canvas for high-quality rendering
     this.offscreenCanvas = document.createElement('canvas');
     this.offscreenCtx = this.offscreenCanvas.getContext('2d')!;
@@ -20,18 +34,122 @@ export class CardRenderer {
     this.offscreenCtx.imageSmoothingQuality = 'high';
   }
 
+  /**
+   * Generate glitter particles for a card
+   */
+  private getGlitterParticles(cardId: string, width: number, height: number): GlitterParticle[] {
+    if (!this.glitterParticles.has(cardId)) {
+      const particles: GlitterParticle[] = [];
+      for (let i = 0; i < this.GLITTER_PARTICLE_COUNT; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: 2 + Math.random() * 4,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.5 + Math.random() * 1.5,
+          brightness: 0.3 + Math.random() * 0.7
+        });
+      }
+      this.glitterParticles.set(cardId, particles);
+    }
+    return this.glitterParticles.get(cardId)!;
+  }
+
+  /**
+   * Draw glitter/sparkle effect on a card
+   * @param isLegendary - if true, uses enhanced rainbow effect for rareness 4
+   */
+  private drawGlitterEffect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, cardId: string, isEvent: boolean = false, isLegendary: boolean = false): void {
+    const particles = this.getGlitterParticles(cardId, width, height);
+    const time = performance.now() / 1000;
+
+    ctx.save();
+
+    for (let i = 0; i < particles.length; i++) {
+      const particle = particles[i];
+      // Calculate animated opacity using sine wave
+      const opacity = (Math.sin(time * particle.speed + particle.phase) + 1) / 2 * particle.brightness;
+
+      if (opacity > 0.1) {
+        let glowMultiplier = 1;
+        let sizeMultiplier = 1;
+
+        if (isLegendary) {
+          glowMultiplier = 1.5;
+          sizeMultiplier = 1.3;
+        }
+
+        const actualSize = particle.size * sizeMultiplier;
+
+        // Draw sparkle with glow
+        ctx.beginPath();
+        ctx.arc(x + particle.x, y + particle.y, actualSize, 0, Math.PI * 2);
+
+        // Glow effect - rainbow for legendary, gold/orange for others
+        if (isLegendary) {
+          const hue = (time * 50 + i * 30) % 360;
+          ctx.shadowColor = `hsla(${hue}, 100%, 60%, ${opacity})`;
+        } else {
+          const rgbColor = isEvent ? '255, 180, 80' : '255, 215, 100';
+          ctx.shadowColor = `rgba(${rgbColor}, ${opacity})`;
+        }
+        ctx.shadowBlur = actualSize * 3 * glowMultiplier;
+
+        // Core sparkle
+        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctx.fill();
+
+        // Draw a small cross/star shape for extra sparkle
+        if (opacity > 0.5) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
+          ctx.lineWidth = isLegendary ? 1.5 : 1;
+          const crossSize = actualSize * 1.5;
+
+          // Horizontal line
+          ctx.beginPath();
+          ctx.moveTo(x + particle.x - crossSize, y + particle.y);
+          ctx.lineTo(x + particle.x + crossSize, y + particle.y);
+          ctx.stroke();
+
+          // Vertical line
+          ctx.beginPath();
+          ctx.moveTo(x + particle.x, y + particle.y - crossSize);
+          ctx.lineTo(x + particle.x, y + particle.y + crossSize);
+          ctx.stroke();
+
+          // Diagonal lines for legendary (8-point star)
+          if (isLegendary) {
+            const diagSize = crossSize * 0.7;
+            ctx.beginPath();
+            ctx.moveTo(x + particle.x - diagSize, y + particle.y - diagSize);
+            ctx.lineTo(x + particle.x + diagSize, y + particle.y + diagSize);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x + particle.x + diagSize, y + particle.y - diagSize);
+            ctx.lineTo(x + particle.x - diagSize, y + particle.y + diagSize);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
   renderCard(ctx: CanvasRenderingContext2D, card: CharacterCard | EventCard, x: number, y: number, width: number, height: number, abilityFontSize: number = 16) {
     // Set up offscreen canvas with supersampling scale
     const scale = this.SUPERSAMPLING_SCALE;
     this.offscreenCanvas.width = width * scale;
     this.offscreenCanvas.height = height * scale;
-    
+
     // Clear canvas and reset transformation
     this.offscreenCtx.clearRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
     this.offscreenCtx.setTransform(scale, 0, 0, scale, 0, 0);
 
     // Check if it's an EventCard or CharacterCard
-    if ('effect' in card) {
+    const isEvent = 'effect' in card;
+    if (isEvent) {
       // It's an EventCard
       this.renderEventCardToContext(this.offscreenCtx, card, 0, 0, width, height);
     } else {
@@ -41,6 +159,20 @@ export class CardRenderer {
 
     // Draw scaled-down result to main canvas
     ctx.drawImage(this.offscreenCanvas, x, y, width, height);
+
+    // Apply glitter effect for rare cards (rareness 3+) and all event cards
+    // Rareness 4 gets enhanced "legendary" rainbow effect
+    if (!isEvent) {
+      const charCard = card as CharacterCard;
+      const rareness = charCard.stats.rareness;
+      if (rareness >= 3) {
+        const isLegendary = rareness >= 4;
+        this.drawGlitterEffect(ctx, x, y, width, height, card.id, false, isLegendary);
+      }
+    } else {
+      // Event cards get standard glitter
+      this.drawGlitterEffect(ctx, x, y, width, height, card.id, true, false);
+    }
   }
 
   // Render only frame and character image (for dragging preview)

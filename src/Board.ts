@@ -597,6 +597,50 @@ export class Board {
       this.ctx.restore();
     }
 
+    // Draw glitter effect for rare characters (rareness 3+, enhanced for 4)
+    if (characterToRender && characterToRender.card.stats.rareness >= 3) {
+      const isLegendary = characterToRender.card.stats.rareness >= 4;
+      this.drawHexGlitter(x, y, characterToRender.card.id, isLegendary);
+    }
+
+    // Draw HP display in lower-left of hex if character is placed
+    if (characterToRender) {
+      this.ctx.save();
+      const scale = getScale();
+      const currentHP = characterToRender.derived?.health ?? characterToRender.card.stats.health;
+      const maxHP = characterToRender.card.stats.health;
+
+      // Position in lower-left area of hex (adjusted to be inside hex)
+      const hpX = x - this.hexSize * 0.35;
+      const hpY = y + this.hexSize * 0.65;
+
+      // Draw background pill shape
+      const pillWidth = 32 * scale;
+      const pillHeight = 18 * scale;
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.beginPath();
+      this.ctx.roundRect(hpX - pillWidth / 2, hpY - pillHeight / 2, pillWidth, pillHeight, pillHeight / 2);
+      this.ctx.fill();
+
+      // Draw HP text with color based on health status
+      const hpRatio = currentHP / maxHP;
+      let hpColor = '#44FF44'; // Green for healthy
+      if (hpRatio <= 0.25) {
+        hpColor = '#FF4444'; // Red for critical
+      } else if (hpRatio <= 0.5) {
+        hpColor = '#FFAA00'; // Orange for wounded
+      }
+
+      this.ctx.font = `bold ${14 * scale}px "Smooch Sans", sans-serif`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillStyle = hpColor;
+
+      // Add heart icon before HP
+      this.ctx.fillText(`♥${currentHP}`, hpX, hpY);
+      this.ctx.restore();
+    }
+
     // Draw event effect icons in lower half of hex if character has been affected
     if (characterToRender && characterToRender.eventEffects && characterToRender.eventEffects.length > 0) {
       this.ctx.save();
@@ -617,9 +661,9 @@ export class Board {
         'Berserk': '😤'
       };
 
-      // Draw icons in lower half of hex
+      // Draw icons in lower-right half of hex (moved to avoid HP overlap)
       const icons = characterToRender.eventEffects.map(e => eventIcons[e.name] || '✦').join('');
-      this.ctx.fillText(icons, x, y + this.hexSize * 0.55);
+      this.ctx.fillText(icons, x + this.hexSize * 0.3, y + this.hexSize * 0.55);
       this.ctx.restore();
     }
 
@@ -770,6 +814,102 @@ export class Board {
     this.ctx.moveTo(x + size, y - size);
     this.ctx.lineTo(x - size, y + size);
     this.ctx.stroke();
+
+    this.ctx.restore();
+  }
+
+  // Glitter particles cache for hex characters
+  private hexGlitterParticles: Map<string, { x: number; y: number; size: number; phase: number; speed: number }[]> = new Map();
+
+  /**
+   * Draw glitter effect on hex for rare characters
+   * @param isLegendary - if true, uses enhanced rainbow effect for rareness 4
+   */
+  private drawHexGlitter(hexX: number, hexY: number, cardId: string, isLegendary: boolean = false): void {
+    const scale = getScale();
+    const particleCount = isLegendary ? 12 : 8; // More particles for legendary
+
+    // Get or create particles for this card
+    const cacheKey = cardId + (isLegendary ? '_legendary' : '');
+    if (!this.hexGlitterParticles.has(cacheKey)) {
+      const particles = [];
+      for (let i = 0; i < particleCount; i++) {
+        // Distribute particles around the hex
+        const angle = (i / particleCount) * Math.PI * 2;
+        const radius = this.hexSize * (0.3 + Math.random() * 0.5);
+        particles.push({
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          size: isLegendary ? 3 + Math.random() * 4 : 2 + Math.random() * 3,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.8 + Math.random() * 1.2
+        });
+      }
+      this.hexGlitterParticles.set(cacheKey, particles);
+    }
+
+    const particles = this.hexGlitterParticles.get(cacheKey)!;
+    const time = performance.now() / 1000;
+
+    this.ctx.save();
+
+    for (let i = 0; i < particles.length; i++) {
+      const particle = particles[i];
+      // Animated opacity with sine wave
+      const opacity = (Math.sin(time * particle.speed + particle.phase) + 1) / 2 * 0.8;
+
+      if (opacity > 0.15) {
+        const px = hexX + particle.x;
+        const py = hexY + particle.y;
+
+        // Glow effect - rainbow for legendary, gold for rare
+        if (isLegendary) {
+          const hue = (time * 50 + i * 30) % 360;
+          this.ctx.shadowColor = `hsla(${hue}, 100%, 60%, ${opacity})`;
+          this.ctx.shadowBlur = particle.size * 5 * scale;
+        } else {
+          this.ctx.shadowColor = `rgba(255, 215, 100, ${opacity})`;
+          this.ctx.shadowBlur = particle.size * 4 * scale;
+        }
+
+        // Core sparkle
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, particle.size * scale, 0, Math.PI * 2);
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        this.ctx.fill();
+
+        // Star burst for bright particles
+        if (opacity > 0.5) {
+          this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.7})`;
+          this.ctx.lineWidth = (isLegendary ? 1.5 : 1) * scale;
+          const crossSize = particle.size * 2 * scale;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(px - crossSize, py);
+          this.ctx.lineTo(px + crossSize, py);
+          this.ctx.stroke();
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(px, py - crossSize);
+          this.ctx.lineTo(px, py + crossSize);
+          this.ctx.stroke();
+
+          // Diagonal lines for legendary (8-point star)
+          if (isLegendary) {
+            const diagSize = crossSize * 0.7;
+            this.ctx.beginPath();
+            this.ctx.moveTo(px - diagSize, py - diagSize);
+            this.ctx.lineTo(px + diagSize, py + diagSize);
+            this.ctx.stroke();
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(px + diagSize, py - diagSize);
+            this.ctx.lineTo(px - diagSize, py + diagSize);
+            this.ctx.stroke();
+          }
+        }
+      }
+    }
 
     this.ctx.restore();
   }

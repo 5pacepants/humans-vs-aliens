@@ -122,4 +122,12 @@ export interface GameState {
   // Menu hover states
   hoverMenuLocal?: boolean;
   hoverMenuVsComputer?: boolean;
+  // Screen shake effect
+  screenShake?: {
+    intensity: number;    // Current intensity (decays over time)
+    offsetX: number;      // Current X offset
+    offsetY: number;      // Current Y offset
+    startTime: number;    // When shake started
+    duration: number;     // How long to shake (ms)
+  };
 }

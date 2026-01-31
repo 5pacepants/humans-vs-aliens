@@ -1310,6 +1310,9 @@ export class Game {
       }
     );
 
+    // Set game state reference for screen shake
+    this.combatAnimationQueue.setGameState(this.state);
+
     // Set events and start playing
     this.combatAnimationQueue.setEvents(this.state.combatEvents || []);
     this.state.phase = 'combatAnimation';

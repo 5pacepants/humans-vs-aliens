@@ -1,6 +1,6 @@
 // Combat Animation Queue - manages sequential playback of combat events
 
-import type { Hex, PlacedCharacter } from './types';
+import type { Hex, PlacedCharacter, GameState } from './types';
 
 // Event types for combat animation
 export type CombatEventType = 'ability' | 'attack' | 'damage' | 'block' | 'death' | 'resurrect' | 'result';
@@ -130,12 +130,32 @@ export class CombatAnimationQueue {
   private onUpdate: () => void;
   private onComplete: () => void;
   private animationFrameId: number | null = null;
+  private gameState?: GameState;
 
   constructor(onUpdate: () => void, onComplete: () => void, timing?: Partial<AnimationTiming>) {
     this.timing = { ...DEFAULT_TIMING, ...timing };
     this.onUpdate = onUpdate;
     this.onComplete = onComplete;
     this.animationState = this.createInitialState();
+  }
+
+  setGameState(gameState: GameState): void {
+    this.gameState = gameState;
+  }
+
+  /**
+   * Trigger screen shake effect
+   */
+  private triggerScreenShake(intensity: number = 8, duration: number = 300): void {
+    if (!this.gameState) return;
+
+    this.gameState.screenShake = {
+      intensity,
+      offsetX: 0,
+      offsetY: 0,
+      startTime: performance.now(),
+      duration
+    };
   }
 
   private createInitialState(): AnimationState {
@@ -292,6 +312,9 @@ export class CombatAnimationQueue {
           offsetY: 0,
           opacity: 1,
         };
+        // Trigger screen shake - intensity based on damage
+        const shakeIntensity = Math.min(event.damage * 3, 15);
+        this.triggerScreenShake(shakeIntensity, 250);
         break;
 
       case 'block':
