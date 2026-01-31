@@ -44,28 +44,16 @@ export class AIController {
     this.isProcessing = true;
 
     try {
-      // Step 1: Decide which deck to draw from
+      // Step 1: Draw cards from our deck
+      // Note: Events are drawn automatically after card placement, not before
       await this.delay(this.turnDelay);
 
-      const deckChoice = this.strategy.chooseWhichDeckToDraw(this.game.state);
-
-      // If choosing event deck, handle differently
-      if (deckChoice === 'event') {
-        // Draw event
-        this.game.drawEvent();
-        await this.delay(this.actionDelay);
-
-        // Handle the event
-        if (this.game.state.drawnEvent) {
-          await this.handleEvent();
-        }
-
-        // Then draw from our deck
-        this.simulateDrawCards();
-      } else {
-        // Draw regular cards
-        this.simulateDrawCards();
+      // Check if it's still our turn (might have changed if something went wrong)
+      if (!this.isAITurn()) {
+        return;
       }
+
+      this.simulateDrawCards();
 
       // Step 2: Wait for cards to be visible
       await this.delay(this.actionDelay);

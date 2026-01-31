@@ -344,6 +344,10 @@ export class Game {
   drawCards() {
     // Block drawing new cards while an event is pending
     if (this.state.drawnEvent) return;
+    // Block drawing if cards are already drawn
+    if (this.state.drawnCards.length > 0) return;
+    // Block drawing if a card is already selected
+    if (this.state.selectedCard) return;
     const deck = this.state.currentPlayer === 'human' ? this.state.humanDeck : this.state.alienDeck;
     if (deck.length > 0) {
       const numToDraw = Math.min(3, deck.length);
@@ -670,10 +674,14 @@ export class Game {
     }
 
     if (event.name === 'Sandstorm') {
-      // Apply -1 range debuff (stored permanently on the character's base stats)
-      const oldRange = target.card.stats.range;
-      target.card.stats.range = Math.max(1, oldRange - 1);
-      const newRange = target.card.stats.range;
+      // Apply -1 range debuff using eventModifiers (so it stacks properly with other modifiers)
+      const oldRange = target.derived?.range ?? target.card.stats.range;
+      if (!target.eventModifiers) target.eventModifiers = [];
+      target.eventModifiers.push({ stat: 'range', value: -1, type: 'modifier', description: 'Sandstorm' });
+
+      // Recompute derived stats to get new value
+      computeDerivedStats(this.state);
+      const newRange = target.derived?.range ?? target.card.stats.range;
 
       this.state.eventHistory.push(`🌪️ Sandstorm hits ${target.card.name}!`);
       this.state.eventHistory.push(`  Range: ${oldRange} → ${newRange}`);
@@ -681,9 +689,6 @@ export class Game {
       // Track which events have affected this character
       if (!target.eventEffects) target.eventEffects = [];
       target.eventEffects.push(event);
-
-      // Recompute derived stats
-      computeDerivedStats(this.state);
     } else if (event.name === 'Heavy armor') {
       // Give target 1 block
       const oldBlock = target.block || 0;
@@ -988,20 +993,25 @@ export class Game {
   }
 
   allCardsPlaced(): boolean {
-    // Check if both decks are empty, no drawn cards, and no drawn event
-    const result = this.state.humanDeck.length === 0 && 
-           this.state.alienDeck.length === 0 && 
+    // Check if both decks are empty, no drawn cards, no pending event,
+    // not in event targeting mode, and not waiting for AI
+    const result = this.state.humanDeck.length === 0 &&
+           this.state.alienDeck.length === 0 &&
            this.state.drawnCards.length === 0 &&
-           !this.state.drawnEvent;
-    
+           !this.state.drawnEvent &&
+           !this.state.eventTargetMode &&
+           !this.state.aiThinking;
+
     console.log('allCardsPlaced check:', {
       humanDeck: this.state.humanDeck.length,
       alienDeck: this.state.alienDeck.length,
       drawnCards: this.state.drawnCards.length,
       drawnEvent: !!this.state.drawnEvent,
+      eventTargetMode: !!this.state.eventTargetMode,
+      aiThinking: !!this.state.aiThinking,
       result
     });
-    
+
     return result;
   }
 
