@@ -1,6 +1,7 @@
 // Basic types for Humans vs Aliens MVP
 
 import type { AbilityEffect } from './abilities/types';
+import type { AnimationState, AnyCombatEvent } from './CombatAnimationQueue';
 
 export type HexTerrain = 'grass' | 'water' | 'forest' | 'toxic' | 'mountain';
 
@@ -55,6 +56,7 @@ export interface PlacedCharacter {
   eventDamage?: number; // damage taken from events (for display in hover info)
   eventEffects?: EventCard[]; // events that have affected this character
   block?: number; // damage absorption from Heavy armor event
+  isDead?: boolean; // marked as dead during combat animation (removed after animation completes)
 }
 
 export type GameMode = 'local' | 'vsComputer';
@@ -67,7 +69,7 @@ export interface GameState {
   eventDeck: EventCard[];
   placedCharacters: PlacedCharacter[];
   currentPlayer: 'human' | 'alien';
-  phase: 'menu' | 'placement' | 'combat' | 'battleLog' | 'scoring';
+  phase: 'menu' | 'placement' | 'combat' | 'combatAnimation' | 'battleLog' | 'scoring';
   // Game mode settings
   gameMode?: GameMode;
   aiDifficulty?: AIDifficulty;
@@ -112,6 +114,8 @@ export interface GameState {
   alienScore: number;
   winner?: 'human' | 'alien' | 'tie';
   battleLog?: string[]; // log of battle events
+  combatEvents?: AnyCombatEvent[]; // structured combat events for animation
+  combatAnimationState?: AnimationState; // current animation state
   eventHistory: string[]; // log of pre-battle events (Thunderstorm, etc.)
   showEventHistory?: boolean; // whether to show event history modal
   hoverEventHistoryButton?: boolean; // hovered event history button

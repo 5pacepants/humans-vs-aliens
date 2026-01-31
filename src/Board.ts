@@ -1,6 +1,7 @@
 // Board class for hex-grid rendering
 
 import type { Hex, GameState, HexTerrain } from './types';
+import type { AnimationState } from './CombatAnimationQueue';
 import { TextureLoader } from './TextureLoader';
 import { CardRenderer } from './CardRenderer';
 import { getHexSize, getScale } from './Scale';
@@ -285,9 +286,33 @@ export class Board {
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2 * scale;
       }
-      // Render character if placed
-      const placed = this.gameState.placedCharacters.find(pc => pc.hex.q === hex.q && pc.hex.r === hex.r);
+      // Render character border if placed (use same death visibility logic as drawTerrainHex)
+      const animState = this.gameState.combatAnimationState;
+      const events = this.gameState.combatEvents || [];
+      const currentEventIndex = animState?.currentEventIndex ?? -1;
+      const placed = this.gameState.placedCharacters.find(pc =>
+        pc.hex.q === hex.q && pc.hex.r === hex.r
+      );
+
+      // Check if dead character should still be visible
+      let showCharacterBorder = false;
       if (placed) {
+        if (!placed.isDead) {
+          showCharacterBorder = true;
+        } else {
+          // Find death event for this character
+          const deathEventIndex = events.findIndex(e =>
+            e.type === 'death' &&
+            'targetHex' in e &&
+            (e as any).targetHex.q === hex.q &&
+            (e as any).targetHex.r === hex.r
+          );
+          // Show border until death animation completes
+          showCharacterBorder = deathEventIndex !== -1 && currentEventIndex <= deathEventIndex;
+        }
+      }
+
+      if (showCharacterBorder && placed) {
         this.ctx.strokeStyle = placed.card.faction === 'human' ? 'blue' : 'red';
         this.ctx.lineWidth = 3 * scale;
         this.drawHex(x, y);
@@ -366,6 +391,11 @@ export class Board {
       }
     }
 
+    // Render combat animation effects
+    if (this.gameState.phase === 'combatAnimation' && this.gameState.combatAnimationState) {
+      this.renderCombatAnimations(this.gameState.combatAnimationState);
+    }
+
     // Show card preview if hovering over a hex with a placed card
     if (this.gameState.hoverHex && !this.gameState.selectedCard) {
       const hoveredPlaced = this.gameState.placedCharacters.find(
@@ -440,7 +470,44 @@ export class Board {
 
   private drawTerrainHex(x: number, y: number, hex: Hex) {
     // Check if this hex has a character placed
-    const placed = this.gameState.placedCharacters.find(pc => pc.hex.q === hex.q && pc.hex.r === hex.r);
+    const animState = this.gameState.combatAnimationState;
+    const events = this.gameState.combatEvents || [];
+    const currentEventIndex = animState?.currentEventIndex ?? -1;
+
+    // Find placed character at this hex
+    const placed = this.gameState.placedCharacters.find(pc =>
+      pc.hex.q === hex.q && pc.hex.r === hex.r
+    );
+
+    // Check if this character's death animation has completed
+    // A dead character should be hidden only AFTER their death event has finished playing
+    let shouldHideDeadCharacter = false;
+    let isBeingAnimatedForDeath = false;
+
+    if (placed?.isDead) {
+      // Find the death event for this character
+      const deathEventIndex = events.findIndex(e =>
+        e.type === 'death' &&
+        'targetHex' in e &&
+        (e as any).targetHex.q === hex.q &&
+        (e as any).targetHex.r === hex.r
+      );
+
+      if (deathEventIndex !== -1) {
+        // Check if we're currently animating this death
+        isBeingAnimatedForDeath = currentEventIndex === deathEventIndex &&
+          animState?.currentPhase === 'fade_death';
+
+        // Hide if we've moved past the death event
+        shouldHideDeadCharacter = currentEventIndex > deathEventIndex;
+      } else {
+        // No death event found but marked dead - shouldn't happen, but hide anyway
+        shouldHideDeadCharacter = true;
+      }
+    }
+
+    // Skip rendering if death animation is complete
+    const characterToRender = shouldHideDeadCharacter ? undefined : placed;
     
     const texture = this.textureLoader.getTexture(hex.terrain);
     
@@ -473,9 +540,15 @@ export class Board {
       this.ctx.fill();
     }
     
-    // If character is placed, draw it in upper half
-    if (placed) {
+    // If character is placed (and not hidden after death), draw it in upper half
+    if (characterToRender) {
       this.ctx.save();
+
+      // Apply fade for death animation
+      if (isBeingAnimatedForDeath && animState?.deathAnimation) {
+        this.ctx.globalAlpha = animState.deathAnimation.spriteOpacity;
+      }
+
       this.ctx.beginPath();
       
       // Left point (angle 180° = π)
@@ -501,12 +574,12 @@ export class Board {
       
       // Draw character image - use custom image if specified
       let assetKey: string;
-      if (placed.card.image) {
-        assetKey = placed.card.image;
+      if (characterToRender.card.image) {
+        assetKey = characterToRender.card.image;
         // Try to load the custom image if not already loaded
         this.cardRenderer['assetLoader'].loadAsset(assetKey).catch((err: Error) => console.warn(err));
       } else {
-        assetKey = placed.card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder';
+        assetKey = characterToRender.card.faction === 'human' ? 'characterPlaceholder' : 'characterAlienPlaceholder';
       }
       const charImage = this.cardRenderer['assetLoader'].getAsset(assetKey);
 
@@ -525,11 +598,11 @@ export class Board {
     }
 
     // Draw event effect icons in lower half of hex if character has been affected
-    if (placed && placed.eventEffects && placed.eventEffects.length > 0) {
+    if (characterToRender && characterToRender.eventEffects && characterToRender.eventEffects.length > 0) {
       this.ctx.save();
       const iconScale = getScale();
       // Halve icon size if 4 or more effects (reduced to 70% of original)
-      const iconSize = (placed.eventEffects.length >= 4 ? 13 : 25) * iconScale;
+      const iconSize = (characterToRender.eventEffects.length >= 4 ? 13 : 25) * iconScale;
       this.ctx.font = `${iconSize}px Arial`;
       this.ctx.textAlign = 'center';
       this.ctx.shadowColor = 'black';
@@ -545,7 +618,7 @@ export class Board {
       };
 
       // Draw icons in lower half of hex
-      const icons = placed.eventEffects.map(e => eventIcons[e.name] || '✦').join('');
+      const icons = characterToRender.eventEffects.map(e => eventIcons[e.name] || '✦').join('');
       this.ctx.fillText(icons, x, y + this.hexSize * 0.55);
       this.ctx.restore();
     }
@@ -586,6 +659,119 @@ export class Board {
     }
     this.ctx.closePath();
     this.ctx.stroke();
+  }
+
+  private renderCombatAnimations(animState: AnimationState): void {
+    // Render highlighted hexes with neon glow
+    for (const highlight of animState.highlightedHexes) {
+      const { x, y } = this.hexToPixel(highlight.hex.q, highlight.hex.r);
+      this.renderHexGlow(x, y, highlight.color, highlight.intensity);
+    }
+
+    // Render floating damage number
+    if (animState.floatingDamage) {
+      const { x, y } = this.hexToPixel(animState.floatingDamage.hex.q, animState.floatingDamage.hex.r);
+      this.renderFloatingDamage(
+        x,
+        y + animState.floatingDamage.offsetY,
+        animState.floatingDamage.damage,
+        animState.floatingDamage.opacity
+      );
+    }
+
+    // Render death animation (red X)
+    if (animState.deathAnimation) {
+      const { x, y } = this.hexToPixel(animState.deathAnimation.hex.q, animState.deathAnimation.hex.r);
+      this.renderDeathX(x, y, animState.deathAnimation.opacity);
+    }
+
+    // Combat message now displayed in right panel (GameUI.renderCombatLogPanel)
+    // No longer rendering message box at bottom of board
+  }
+
+  private renderHexGlow(x: number, y: number, color: 'blue' | 'red' | 'orange' | 'green', intensity: number): void {
+    const scale = getScale();
+    const colorMap = {
+      blue: '#00AAFF',
+      red: '#FF4444',
+      orange: '#FF9900',
+      green: '#44FF44',
+    };
+
+    this.ctx.save();
+    this.ctx.globalAlpha = intensity;
+    this.ctx.shadowColor = colorMap[color];
+    this.ctx.shadowBlur = 30 * scale * intensity;
+    this.ctx.strokeStyle = colorMap[color];
+    this.ctx.lineWidth = 5 * scale;
+
+    // Draw hex outline with glow
+    this.ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i;
+      const hx = x + this.hexSize * Math.cos(angle);
+      const hy = y + this.hexSize * Math.sin(angle);
+      if (i === 0) this.ctx.moveTo(hx, hy);
+      else this.ctx.lineTo(hx, hy);
+    }
+    this.ctx.closePath();
+    this.ctx.stroke();
+
+    // Draw again for stronger glow
+    this.ctx.shadowBlur = 50 * scale * intensity;
+    this.ctx.stroke();
+
+    this.ctx.restore();
+  }
+
+  private renderFloatingDamage(x: number, y: number, damage: number, opacity: number): void {
+    const scale = getScale();
+
+    this.ctx.save();
+    this.ctx.globalAlpha = opacity;
+    this.ctx.fillStyle = '#FF4444';
+    this.ctx.font = `bold ${36 * scale}px "Smooch Sans", sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+
+    // Shadow for visibility
+    this.ctx.shadowColor = 'black';
+    this.ctx.shadowBlur = 8 * scale;
+    this.ctx.shadowOffsetX = 2 * scale;
+    this.ctx.shadowOffsetY = 2 * scale;
+
+    // Draw damage number with minus sign
+    this.ctx.fillText(`-${damage}`, x, y);
+
+    this.ctx.restore();
+  }
+
+  private renderDeathX(x: number, y: number, opacity: number): void {
+    const scale = getScale();
+    const size = this.hexSize * 0.6;
+
+    this.ctx.save();
+    this.ctx.globalAlpha = opacity;
+    this.ctx.strokeStyle = '#FF0000';
+    this.ctx.lineWidth = 8 * scale;
+    this.ctx.lineCap = 'round';
+
+    // Shadow for visibility
+    this.ctx.shadowColor = '#FF0000';
+    this.ctx.shadowBlur = 20 * scale;
+
+    // Draw X
+    this.ctx.beginPath();
+    this.ctx.moveTo(x - size, y - size);
+    this.ctx.lineTo(x + size, y + size);
+    this.ctx.stroke();
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + size, y - size);
+    this.ctx.lineTo(x - size, y + size);
+    this.ctx.stroke();
+
+    this.ctx.restore();
   }
 
 }

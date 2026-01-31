@@ -42,6 +42,12 @@ export class GameUI {
     const uiX = boardWidth;
     const uiWidth = window.innerWidth - boardWidth;
 
+    // During combat animation, render battle log panel instead of normal UI
+    if (gameState.phase === 'combatAnimation') {
+      this.renderCombatLogPanel(gameState, uiX, uiWidth);
+      return;
+    }
+
     // Draw background image for UI (right 40%)
     if (this.backgroundImage.complete) {
       // Save context state
@@ -996,6 +1002,150 @@ export class GameUI {
 
       this.ctx.restore();
     }
+  }
+
+  /**
+   * Render the combat log panel on the right side during combat animation
+   */
+  private renderCombatLogPanel(gameState: GameState, uiX: number, uiWidth: number): void {
+    const scale = getScale();
+    const padding = 20 * scale;
+
+    // Draw background image for UI area (same as normal)
+    if (this.backgroundImage.complete) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.rect(uiX, 0, uiWidth, window.innerHeight);
+      this.ctx.clip();
+      this.ctx.drawImage(this.backgroundImage, uiX, 0, uiWidth, window.innerHeight);
+
+      // Apply soft gradient fade on left edge
+      const gradientWidth = 120 * scale;
+      const fadeGradient = this.ctx.createLinearGradient(uiX, 0, uiX + gradientWidth, 0);
+      fadeGradient.addColorStop(0, 'rgba(74, 84, 98, 0.6)');
+      fadeGradient.addColorStop(0.5, 'rgba(74, 84, 98, 0.2)');
+      fadeGradient.addColorStop(1, 'rgba(74, 84, 98, 0)');
+      this.ctx.fillStyle = fadeGradient;
+      this.ctx.fillRect(uiX, 0, gradientWidth, window.innerHeight);
+      this.ctx.restore();
+    } else {
+      this.ctx.fillStyle = '#4a4a4a';
+      this.ctx.fillRect(uiX, 0, uiWidth, window.innerHeight);
+    }
+
+    // Draw battle log panel
+    const panelX = uiX + padding;
+    const panelY = padding;
+    const panelWidth = uiWidth - padding * 2;
+    const panelHeight = window.innerHeight - padding * 2;
+
+    // Semi-transparent dark background
+    this.ctx.fillStyle = 'rgba(20, 10, 5, 0.9)';
+    this.ctx.strokeStyle = '#F0D4A8';
+    this.ctx.lineWidth = 3 * scale;
+    this.roundedRect(this.ctx, panelX, panelY, panelWidth, panelHeight, 12 * scale);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Title
+    this.ctx.fillStyle = '#F0D4A8';
+    this.ctx.font = `bold ${28 * scale}px "Smooch Sans", sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 1.0)';
+    this.ctx.shadowBlur = 5 * scale;
+    this.ctx.shadowOffsetX = 2 * scale;
+    this.ctx.shadowOffsetY = 2 * scale;
+    this.ctx.fillText('BATTLE LOG', panelX + panelWidth / 2, panelY + 35 * scale);
+
+    // Reset shadow
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 0;
+
+    // Get messages up to current event
+    const events = gameState.combatEvents || [];
+    const currentIndex = gameState.combatAnimationState?.currentEventIndex ?? -1;
+
+    // Helper to determine message color (same logic as battleLog modal)
+    const getLogColor = (line: string): string => {
+      const humanNames = ['General Johnson', 'Hannah Honor', 'Nurse Tender', 'Heavy Gunner Jack'];
+      const alienNames = ['Pilot Frnuhuh', "Elder K'tharr", 'Mutant Vor', 'Warlord Vekkor'];
+
+      // Check if it's an ability message (yellow)
+      if (line.includes('gives') || line.includes('bonus damage') ||
+          line.includes('is resurrected') || line.includes('blocks the attack')) {
+        return '#FFD700'; // Yellow
+      }
+
+      // Check for human actions
+      const isHumanMessage = humanNames.some(name => line.startsWith(name));
+      if (isHumanMessage) {
+        if (line.includes('attacks') || line.includes('for') && line.includes('damage')) {
+          return '#4A9EFF'; // Blue - human does damage
+        }
+        if (line.includes('loses') || line.includes('takes')) {
+          return '#FF4A4A'; // Red - human takes damage
+        }
+        if (line.includes('dies')) {
+          return '#FF4A4A'; // Red - human dies
+        }
+      }
+
+      // Check for alien actions
+      const isAlienMessage = alienNames.some(name => line.startsWith(name));
+      if (isAlienMessage) {
+        if (line.includes('attacks') || line.includes('for') && line.includes('damage')) {
+          return '#4AFF4A'; // Green - alien does damage
+        }
+        if (line.includes('loses') || line.includes('takes')) {
+          return '#D946EF'; // Purple - alien takes damage
+        }
+        if (line.includes('dies')) {
+          return '#D946EF'; // Purple - alien dies
+        }
+      }
+
+      // Default color
+      return '#F0D4A8'; // Beige
+    };
+
+    // Draw log lines
+    this.ctx.font = `${14 * scale}px Quicksand, sans-serif`;
+    this.ctx.textAlign = 'left';
+    const lineHeight = 22 * scale;
+    const textStartY = panelY + 70 * scale;
+    const textMargin = 15 * scale;
+
+    // Draw messages from start to current index
+    for (let i = 0; i <= currentIndex && i < events.length; i++) {
+      const message = events[i].message;
+      const y = textStartY + i * lineHeight;
+
+      // Stop drawing if we're past the panel bottom
+      if (y > panelY + panelHeight - 60 * scale) break;
+
+      // Highlight current event
+      const isCurrentEvent = i === currentIndex;
+      if (isCurrentEvent) {
+        this.ctx.fillStyle = 'rgba(240, 212, 168, 0.1)';
+        this.ctx.fillRect(panelX + textMargin - 5, y - lineHeight * 0.7, panelWidth - textMargin * 2 + 10, lineHeight);
+      }
+
+      this.ctx.fillStyle = getLogColor(message);
+      this.ctx.fillText(message, panelX + textMargin, y);
+    }
+
+    // Draw skip hint at bottom
+    this.ctx.fillStyle = '#888888';
+    this.ctx.font = `${12 * scale}px Quicksand, sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('SPACE = Skip all  |  ENTER = Skip event  |  P = Pause', panelX + panelWidth / 2, panelY + panelHeight - 15 * scale);
+
+    // Reset alignment
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'alphabetic';
   }
 
   /**

@@ -12,6 +12,32 @@ export class InputHandler {
     this.canvas.addEventListener('click', this.handleClick.bind(this));
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
+
+    // Add keyboard listener for combat animation controls
+    window.addEventListener('keydown', this.handleKeyDown.bind(this));
+  }
+
+  private handleKeyDown(event: KeyboardEvent) {
+    // Handle combat animation controls
+    if (this.game.state.phase === 'combatAnimation') {
+      if (event.code === 'Space') {
+        event.preventDefault();
+        // Skip entire animation
+        this.game.skipCombatAnimation();
+      } else if (event.code === 'Enter') {
+        event.preventDefault();
+        // Skip current event only
+        this.game.skipCurrentCombatEvent();
+      } else if (event.code === 'KeyP') {
+        event.preventDefault();
+        // Toggle pause
+        if (this.game.state.combatAnimationState?.isPaused) {
+          this.game.resumeCombatAnimation();
+        } else {
+          this.game.pauseCombatAnimation();
+        }
+      }
+    }
   }
 
   // Get CSS dimensions (not physical pixels) for mouse coordinate matching

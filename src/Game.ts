@@ -1,6 +1,8 @@
 // Game class to manage state and logic
 
-import type { GameState, CharacterCard, EventCard, Hex, GameMode, AIDifficulty } from './types';
+import type { GameState, CharacterCard, EventCard, Hex, GameMode, AIDifficulty, PlacedCharacter } from './types';
+import type { AbilityEvent, AttackEvent, DamageEvent, BlockEvent, DeathEvent, ResurrectEvent, ResultEvent } from './CombatAnimationQueue';
+import { CombatAnimationQueue } from './CombatAnimationQueue';
 import { computeDerivedStats } from './abilities/AbilityEngine';
 import { AIController, AIStrategyMedium } from './ai';
 
@@ -8,6 +10,7 @@ export class Game {
   state: GameState;
   private onUpdate: () => void;
   private aiController?: AIController;
+  private combatAnimationQueue?: CombatAnimationQueue;
 
   constructor(onUpdate: () => void) {
     this.onUpdate = onUpdate;
@@ -1037,13 +1040,14 @@ export class Game {
   }
 
   startBattle() {
-    // Initiera battleLog
+    // Initialize battleLog and combatEvents
     this.state.battleLog = [];
+    this.state.combatEvents = [];
 
-    // Beräkna derived stats med abilities
+    // Compute derived stats with abilities
     computeDerivedStats(this.state);
 
-    // Skapa namn med index om flera av samma typ finns
+    // Create names with index for multiple of same type
     const nameCount: Record<string, number> = {};
     const nameMap: Map<CharacterCard, string> = new Map();
     for (const placed of this.state.placedCharacters) {
@@ -1052,54 +1056,64 @@ export class Game {
       nameMap.set(placed.card, `${baseName} (${nameCount[baseName]})`);
     }
 
-    // Logga abilities baserat på modifiers
+    // Log abilities based on modifiers (as ability events)
     for (const placed of this.state.placedCharacters) {
       if (placed.modifiers && placed.modifiers.length > 0) {
         for (const modifier of placed.modifiers) {
           if (modifier.source && modifier.stat && modifier.value) {
-            const sourceName = nameMap.get(modifier.source.card);
-            const targetName = nameMap.get(placed.card);
-            // Convert stat name to readable form (e.g., 'attacks' -> 'attack')
+            const sourceName = nameMap.get(modifier.source.card) || modifier.source.card.name;
+            const targetName = nameMap.get(placed.card) || placed.card.name;
             const statName = modifier.stat === 'attacks' ? 'attack' : modifier.stat;
-
-            // Check if this is a terrain effect (source === target with description)
             const isTerrainEffect = modifier.source === placed && modifier.description;
 
-            // Format based on type
+            let message: string;
             if (modifier.type === 'multiplier') {
-              if (isTerrainEffect) {
-                this.state.battleLog.push(`${modifier.description} gives ${targetName} x${modifier.value} ${statName}.`);
-              } else {
-                this.state.battleLog.push(`${sourceName} gives ${targetName} x${modifier.value} ${statName}.`);
-              }
+              message = isTerrainEffect
+                ? `${modifier.description} gives ${targetName} x${modifier.value} ${statName}.`
+                : `${sourceName} gives ${targetName} x${modifier.value} ${statName}.`;
             } else {
-              if (isTerrainEffect) {
-                this.state.battleLog.push(`${modifier.description} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`);
-              } else {
-                this.state.battleLog.push(`${sourceName} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`);
-              }
+              message = isTerrainEffect
+                ? `${modifier.description} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`
+                : `${sourceName} gives ${targetName} ${modifier.value > 0 ? '+' : ''}${modifier.value} ${statName}.`;
             }
+
+            this.state.battleLog.push(message);
+            this.state.combatEvents.push({
+              type: 'ability',
+              message,
+              source: modifier.source,
+              target: placed,
+              abilityName: modifier.description || 'Ability',
+              statAffected: statName,
+              value: modifier.value,
+              isMultiplier: modifier.type === 'multiplier',
+            } as AbilityEvent);
           }
         }
       }
     }
 
-    // Sortera alla placerade karaktärer efter initiativ (högst först)
-    let combatOrder = [...this.state.placedCharacters].sort((a, b) => {
+    // Sort characters by initiative (highest first)
+    const combatOrder = [...this.state.placedCharacters].sort((a, b) => {
       const aInit = a.derived?.initiative ?? a.card.stats.initiative;
       const bInit = b.derived?.initiative ?? b.card.stats.initiative;
       return bInit - aInit;
     });
 
-    // Simulera striden: varje karaktär attackerar närmast motståndare inom range
+    // Simulate battle: each character attacks nearest enemy in range
     for (const attacker of combatOrder) {
+      // Check if attacker is still alive
+      if (!this.state.placedCharacters.includes(attacker)) continue;
+
       const attackerStats = attacker.derived ?? attacker.card.stats;
       const numAttacks = attackerStats.attacks;
+
       for (let attackNum = 0; attackNum < numAttacks; attackNum++) {
-        // Hitta närmaste motståndare inom range
-        const enemies = this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction);
-        let closestEnemy = null;
+        // Find nearest enemy in range (exclude dead characters)
+        const enemies = this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction && !pc.isDead);
+        let closestEnemy: PlacedCharacter | null = null;
         let minDist = Infinity;
+
         for (const enemy of enemies) {
           const dist = this.hexDistance(attacker.hex, enemy.hex);
           if (dist <= attackerStats.range && dist < minDist) {
@@ -1107,78 +1121,118 @@ export class Game {
             closestEnemy = enemy;
           }
         }
-        if (closestEnemy) {
-          // Logga attack med damage och indexnamn
-          let damage = attackerStats.damage;
 
-          // Check for Heavy Gunner Jack ability - 50% chance for +1 damage
+        if (closestEnemy) {
+          let damage = attackerStats.damage;
           let bonusDamage = 0;
+
+          // Check for Heavy Gunner Jack ability
           if (attacker.card.name === 'Heavy Gunner Jack' && Math.random() < 0.5) {
             bonusDamage = 1;
             damage += bonusDamage;
           }
 
-          this.state.battleLog.push(`${nameMap.get(attacker.card)} attacks ${nameMap.get(closestEnemy.card)} for ${damage} damage.`);
+          const attackMessage = `${nameMap.get(attacker.card)} attacks ${nameMap.get(closestEnemy.card)} for ${damage} damage.`;
+          this.state.battleLog.push(attackMessage);
+          this.state.combatEvents.push({
+            type: 'attack',
+            message: attackMessage,
+            attacker,
+            attackerHex: { ...attacker.hex },
+            target: closestEnemy,
+            targetHex: { ...closestEnemy.hex },
+            damage,
+            bonusDamage: bonusDamage > 0 ? bonusDamage : undefined,
+          } as AttackEvent);
 
-          // Log bonus damage if it procced
           if (bonusDamage > 0) {
-            this.state.battleLog.push(`${nameMap.get(attacker.card)} deals ${bonusDamage} bonus damage!`);
+            const bonusMessage = `${nameMap.get(attacker.card)} deals ${bonusDamage} bonus damage!`;
+            this.state.battleLog.push(bonusMessage);
           }
 
-          // Check for Mutant Vor block ability
+          // Check for Mutant Vor block
           if (closestEnemy.card.name === 'Mutant Vor' && !closestEnemy.hasBlockedFirstAttack) {
-            // Block the first attack completely
             closestEnemy.hasBlockedFirstAttack = true;
-            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} blocks the attack!`);
+            const blockMessage = `${nameMap.get(closestEnemy.card)} blocks the attack!`;
+            this.state.battleLog.push(blockMessage);
+            this.state.combatEvents.push({
+              type: 'block',
+              message: blockMessage,
+              blocker: closestEnemy,
+              blockerHex: { ...closestEnemy.hex },
+            } as BlockEvent);
           } else {
-            // Skada
+            // Apply damage
             closestEnemy.card.stats.health -= damage;
-            this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} loses ${damage} health.`);
+            const damageMessage = `${nameMap.get(closestEnemy.card)} loses ${damage} health.`;
+            this.state.battleLog.push(damageMessage);
+            this.state.combatEvents.push({
+              type: 'damage',
+              message: damageMessage,
+              target: closestEnemy,
+              targetHex: { ...closestEnemy.hex },
+              damage,
+              remainingHealth: closestEnemy.card.stats.health,
+            } as DamageEvent);
 
-            // Dödsfall eller återstående health
+            // Check for death
             if (closestEnemy.card.stats.health <= 0) {
-              this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} dies.`);
+              const deathMessage = `${nameMap.get(closestEnemy.card)} dies.`;
+              this.state.battleLog.push(deathMessage);
 
               // Check for Nurse Tender resurrection
               let resurrected = false;
               if (closestEnemy.card.faction === 'human') {
-                // Find adjacent Nurse Tenders
                 const adjacentNurses = this.state.placedCharacters.filter(pc =>
                   pc.card.name === 'Nurse Tender' &&
-                  this.hexDistance(pc.hex, closestEnemy.hex) === 1
+                  this.hexDistance(pc.hex, closestEnemy!.hex) === 1
                 );
 
-                // If there's at least one adjacent Nurse Tender, try resurrection
-                if (adjacentNurses.length > 0) {
-                  // 20% chance to resurrect
-                  if (Math.random() < 0.2) {
-                    closestEnemy.card.stats.health = 1;
-                    resurrected = true;
-                    this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} is resurrected by ${nameMap.get(adjacentNurses[0].card)} with 1 HP!`);
-                  }
+                if (adjacentNurses.length > 0 && Math.random() < 0.2) {
+                  closestEnemy.card.stats.health = 1;
+                  resurrected = true;
+                  const resurrectMessage = `${nameMap.get(closestEnemy.card)} is resurrected by ${nameMap.get(adjacentNurses[0].card)} with 1 HP!`;
+                  this.state.battleLog.push(resurrectMessage);
+                  this.state.combatEvents.push({
+                    type: 'resurrect',
+                    message: resurrectMessage,
+                    target: closestEnemy,
+                    targetHex: { ...closestEnemy.hex },
+                    healer: adjacentNurses[0],
+                    healerHex: { ...adjacentNurses[0].hex },
+                  } as ResurrectEvent);
                 }
               }
 
-              // Remove from placed characters if not resurrected
               if (!resurrected) {
-                this.state.placedCharacters = this.state.placedCharacters.filter(pc => pc !== closestEnemy);
+                this.state.combatEvents.push({
+                  type: 'death',
+                  message: deathMessage,
+                  target: closestEnemy,
+                  targetHex: { ...closestEnemy.hex },
+                } as DeathEvent);
+                // Mark as dead but don't remove yet - will be removed after animation
+                closestEnemy.isDead = true;
               }
             } else {
-              this.state.battleLog.push(`${nameMap.get(closestEnemy.card)} has ${closestEnemy.card.stats.health} remaining.`);
+              const remainingMessage = `${nameMap.get(closestEnemy.card)} has ${closestEnemy.card.stats.health} remaining.`;
+              this.state.battleLog.push(remainingMessage);
             }
           }
         }
-        // Om inga fiender kvar, bryt attacker
-        if (this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction).length === 0) {
+
+        // If no enemies left (excluding dead), break
+        if (this.state.placedCharacters.filter(pc => pc.card.faction !== attacker.card.faction && !pc.isDead).length === 0) {
           break;
         }
       }
     }
 
-    // Beräkna slutpoäng och vinnare efter striden
+    // Calculate final scores (only count living characters)
     let humanScore = 0;
     let alienScore = 0;
     for (const placed of this.state.placedCharacters) {
+      if (placed.isDead) continue; // Skip dead characters
       const hexPoints = placed.hex.value || 0;
       const cardPoints = placed.card.stats.points;
       const totalPoints = hexPoints + cardPoints;
@@ -1188,24 +1242,86 @@ export class Game {
         alienScore += totalPoints;
       }
     }
-    let winner = '';
+
+    let winnerText = '';
+    let winner: 'human' | 'alien' | 'tie' = 'tie';
     if (humanScore > alienScore) {
-      winner = 'Humans win!';
+      winnerText = 'Humans win!';
+      winner = 'human';
     } else if (alienScore > humanScore) {
-      winner = 'Aliens win!';
+      winnerText = 'Aliens win!';
+      winner = 'alien';
     } else {
-      winner = 'Tie!';
+      winnerText = 'Tie!';
     }
-    // Lägg till summering i battle log
+
+    // Add summary to battle log
     this.state.battleLog.push('');
     this.state.battleLog.push('Result:');
     this.state.battleLog.push(`Humans: ${humanScore} points`);
     this.state.battleLog.push(`Aliens: ${alienScore} points`);
-    this.state.battleLog.push(winner);
+    this.state.battleLog.push(winnerText);
 
-    // När loggen är klar, visa den för spelaren innan scoring
-    this.state.phase = 'battleLog';
+    // Add result event
+    this.state.combatEvents.push({
+      type: 'result',
+      message: winnerText,
+      humanScore,
+      alienScore,
+      winner,
+    } as ResultEvent);
+
+    // Store scores
+    this.state.humanScore = humanScore;
+    this.state.alienScore = alienScore;
+    this.state.winner = winner;
+
+    // Start combat animation
+    this.startCombatAnimation();
+  }
+
+  private startCombatAnimation(): void {
+    // Create animation queue
+    this.combatAnimationQueue = new CombatAnimationQueue(
+      () => {
+        // Update callback - sync animation state to game state
+        if (this.combatAnimationQueue) {
+          this.state.combatAnimationState = this.combatAnimationQueue.getState();
+        }
+        this.onUpdate();
+      },
+      () => {
+        // Complete callback - clean up dead characters and show battle log
+        this.state.placedCharacters = this.state.placedCharacters.filter(pc => !pc.isDead);
+        this.state.combatAnimationState = undefined;
+        this.state.phase = 'battleLog';
+        this.onUpdate();
+      }
+    );
+
+    // Set events and start playing
+    this.combatAnimationQueue.setEvents(this.state.combatEvents || []);
+    this.state.phase = 'combatAnimation';
+    this.state.combatAnimationState = this.combatAnimationQueue.getState();
+    this.combatAnimationQueue.play();
     this.onUpdate();
+  }
+
+  // Public methods for animation control
+  pauseCombatAnimation(): void {
+    this.combatAnimationQueue?.pause();
+  }
+
+  resumeCombatAnimation(): void {
+    this.combatAnimationQueue?.resume();
+  }
+
+  skipCombatAnimation(): void {
+    this.combatAnimationQueue?.skip();
+  }
+
+  skipCurrentCombatEvent(): void {
+    this.combatAnimationQueue?.skipCurrentEvent();
   }
 
   private hexDistance(a: Hex, b: Hex): number {
