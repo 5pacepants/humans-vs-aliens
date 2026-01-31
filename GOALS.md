@@ -129,3 +129,154 @@ src/
 - Render game mode selection screen
 - Show "AI thinking..." indicator
 - Highlight AI's selected card/hex briefly
+
+---
+
+# Polish & Professional Feel - TODO
+
+## Syfte
+Gå från hobbyprojekt till professionell känsla. Följande lista baseras på analys av vad som skiljer spelet från t.ex. Hearthstone och Slay the Spire.
+
+---
+
+## 1. LJUD (Högsta prioritet)
+
+### UI-ljud
+- [ ] Hover-ljud på knappar (subtilt)
+- [ ] Hover-ljud på kort
+- [ ] Klick-ljud på knappar
+- [ ] Bekräftelse-ljud vid val
+- [ ] Fel-ljud vid ogiltigt drag
+
+### Kortljud
+- [ ] Kortdragningsljud ("fwipp") när kort dras från deck
+- [ ] Kort-placeringsljud när kort landar på brädet
+- [ ] Kort-välj-ljud när man plockar upp ett kort
+
+### Stridsljud
+- [ ] Attack-ljud med träffkänsla
+- [ ] Damage-ljud (olika för lite/mycket skada)
+- [ ] Dödsljud/försvinnande
+- [ ] Ability-aktiveringsljud
+- [ ] Block-ljud (när armor absorberar)
+
+### Ambient & Musik
+- [ ] Bakgrundsmusik för placement phase
+- [ ] Intensivare musik för combat phase
+- [ ] Vinnarfanfar
+- [ ] Ambient ljud på brädet
+
+---
+
+## 2. ANIMATIONER
+
+### Attack-animation (saknas nu)
+- [ ] Attackerande enhet rör sig MOT målet (krockar in)
+- [ ] Anticipation: Enheten "laddar upp" innan attack (drar sig bakåt)
+- [ ] Follow-through efter träff
+
+### Kort-animationer
+- [ ] Overshoot/bounce: Kort som landar studsar lite
+- [ ] Squash & stretch: Kort som plockas upp deformeras subtilt
+- [ ] Kort flyger från draw pile till visningsposition (inte "poofar" fram)
+- [ ] Ease-out och spring-funktioner på alla kortförflyttningar
+
+### Impact-effekter
+- [ ] Skärmskakning vid kraftiga slag
+- [ ] Hex-skakning vid damage
+- [ ] Partikeleffekter vid attacker (gnistor, damm)
+- [ ] Partikeleffekter vid abilities
+- [ ] Partikeleffekter vid död
+
+---
+
+## 3. "LEVANDE" KÄNSLA (Tomrummet mellan handlingar)
+
+- [ ] Spelbara kort "andas" (pulserar subtilt)
+- [ ] Interagerbara element har pulsande glow
+- [ ] Brädet har ambient rörelse (subtila ljuseffekter som rör sig)
+- [ ] Karaktärer på brädet har idle-animation (subtil rörelse)
+- [ ] Hovrade element reagerar INNAN klick (förstoring börjar direkt)
+
+---
+
+## 4. FEEDBACK & TYDLIGHET
+
+### Visuell feedback
+- [ ] HP-siffra synlig på varje karaktär på hexbrädet
+- [ ] HP räknas ner visuellt under strid (inte bara byter värde)
+- [ ] Tydligare indikation på "vad händer just nu"
+
+### Fokus under strid
+- [ ] När karaktär attackerar: ALLA andra karaktärer tonas ner/blurras
+- [ ] Endast attackerare och mål har full färg och skärpa
+- [ ] Spotlight-effekt på aktiva enheter
+
+---
+
+## 5. ÖVERGÅNGAR & FLÖDE
+
+- [ ] Kort kommer in sekventiellt (inte alla samtidigt) vid draw
+- [ ] Fasbyte har smooth övergång (fade eller slide)
+- [ ] Easing-funktioner på alla animationer (ease-out, spring)
+- [ ] Delay mellan varje kort som dras för dramatisk effekt
+
+---
+
+## 6. VIKTAT VÄRDE PÅ KORT
+
+- [ ] Sällsynta kort har speciella rameffekter
+- [ ] Högre rareness = mer dramatisk animation vid draw
+- [ ] Glitter/shimmer-effekt på unika kort
+- [ ] Speciella ljud för sällsynta kort
+
+---
+
+## Prioriterad implementationsordning
+
+### Fas 1: Ljud (störst impact)
+1. Grundläggande UI-ljud (hover, klick)
+2. Kortljud (dra, placera)
+3. Stridsljud (attack, damage)
+4. Bakgrundsmusik
+
+### Fas 2: Core "juice"
+5. Attack-animation (krocka in i mål)
+6. Kort-draw-animation (flyger från deck)
+7. Skärmskakning vid damage
+8. HP-siffror på hexbrädet
+
+### Fas 3: Fokus & clarity
+9. Mörka ner icke-relevanta karaktärer under strid
+10. Pulsande glow på interagerbara element
+11. Sekventiell kortanimation
+
+### Fas 4: Polish
+12. Partikeleffekter
+13. Ambient rörelse på brädet
+14. Viktat värde på kort (rareness-effekter)
+15. Alla easing-funktioner
+
+---
+
+## Tekniska noter
+
+### Ljudsystem
+Skapa en `SoundManager` klass som:
+- Preloadar alla ljud
+- Har volymkontroll
+- Kan spela flera ljud samtidigt
+- Stödjer looping för musik
+
+### Partikelsystem
+Skapa en enkel `ParticleSystem` klass som:
+- Spawnar partiklar vid position
+- Stödjer olika typer (spark, dust, magic)
+- Hanterar livstid och fade-out
+- Integreras med requestAnimationFrame
+
+### Animation utilities
+Skapa easing-funktioner:
+- `easeOutCubic`
+- `easeOutElastic` (bounce)
+- `spring` (för kort-animationer)
