@@ -1102,8 +1102,8 @@ export class Game {
 
     // Simulate battle: each character attacks nearest enemy in range
     for (const attacker of combatOrder) {
-      // Check if attacker is still alive
-      if (!this.state.placedCharacters.includes(attacker)) continue;
+      // Check if attacker is still alive (not removed and not marked as dead)
+      if (!this.state.placedCharacters.includes(attacker) || attacker.isDead) continue;
 
       const attackerStats = attacker.derived ?? attacker.card.stats;
       const numAttacks = attackerStats.attacks;
@@ -1180,11 +1180,12 @@ export class Game {
               const deathMessage = `${nameMap.get(closestEnemy.card)} dies.`;
               this.state.battleLog.push(deathMessage);
 
-              // Check for Nurse Tender resurrection
+              // Check for Nurse Tender resurrection (only living nurses can resurrect)
               let resurrected = false;
               if (closestEnemy.card.faction === 'human') {
                 const adjacentNurses = this.state.placedCharacters.filter(pc =>
                   pc.card.name === 'Nurse Tender' &&
+                  !pc.isDead &&
                   this.hexDistance(pc.hex, closestEnemy!.hex) === 1
                 );
 
