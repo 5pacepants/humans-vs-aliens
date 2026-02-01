@@ -1,10 +1,20 @@
 // Music Manager - handles background music playback
 
+// Import to check effects volume
+let getSoundManagerRef: (() => { getVolume(): number }) | null = null;
+export function setSoundManagerRef(getter: () => { getVolume(): number }): void {
+  getSoundManagerRef = getter;
+}
+
 export class MusicManager {
   private audio: HTMLAudioElement | null = null;
   private isPlaying: boolean = false;
-  private volume: number = 0.3; // Default volume (30%)
+  private volume: number = 0.4; // Default volume (40%)
   private hasUserInteracted: boolean = false;
+  private isDucked: boolean = false;
+  private duckTimeout: number | null = null;
+  private readonly DUCK_REDUCTION = 0.1; // Reduce volume by 10% when ducked
+  private readonly DUCK_FADE_TIME = 150; // ms to fade down/up
 
   constructor() {
     // Create audio element
@@ -93,6 +103,73 @@ export class MusicManager {
    */
   isCurrentlyPlaying(): boolean {
     return this.isPlaying;
+  }
+
+  /**
+   * Duck the music (lower volume temporarily for other sounds)
+   * @param duration - how long to stay ducked before auto-unduck (ms)
+   */
+  duck(duration: number = 1500): void {
+    if (!this.audio || !this.isPlaying) return;
+
+    // Don't duck if effects volume is 0
+    if (getSoundManagerRef) {
+      const effectsVolume = getSoundManagerRef().getVolume();
+      if (effectsVolume === 0) return;
+    }
+
+    // Clear any pending unduck
+    if (this.duckTimeout !== null) {
+      clearTimeout(this.duckTimeout);
+    }
+
+    // Quick fade to duck volume (reduce by 10%)
+    if (!this.isDucked) {
+      this.isDucked = true;
+      const duckedVolume = this.volume * (1 - this.DUCK_REDUCTION);
+      this.smoothVolumeChange(duckedVolume, this.DUCK_FADE_TIME);
+    }
+
+    // Auto-unduck after duration
+    this.duckTimeout = window.setTimeout(() => {
+      this.unduck();
+    }, duration);
+  }
+
+  /**
+   * Unduck the music (restore normal volume)
+   */
+  unduck(): void {
+    if (!this.audio || !this.isDucked) return;
+
+    this.isDucked = false;
+    this.duckTimeout = null;
+    this.smoothVolumeChange(this.volume, this.DUCK_FADE_TIME);
+  }
+
+  /**
+   * Smoothly change volume over time
+   */
+  private smoothVolumeChange(targetVolume: number, duration: number): void {
+    if (!this.audio) return;
+
+    const startVolume = this.audio.volume;
+    const startTime = performance.now();
+
+    const animate = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      if (this.audio) {
+        this.audio.volume = startVolume + (targetVolume - startVolume) * progress;
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
   }
 
   /**

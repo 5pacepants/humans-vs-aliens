@@ -1,16 +1,22 @@
 // InputHandler class for mouse clicks
 
 import { getScale, getHexSize, getCardWidth, getCardHeight, getSmallCardWidth, getSmallCardHeight } from './Scale';
+import { getMusicManager } from './MusicManager';
+import { getSoundManager } from './SoundManager';
 
 export class InputHandler {
   private canvas: HTMLCanvasElement;
   private game: any;
+  private draggingSlider: 'music' | 'effects' | null = null;
 
   constructor(canvas: HTMLCanvasElement, game: any) {
     this.canvas = canvas;
     this.game = game;
     this.canvas.addEventListener('click', this.handleClick.bind(this));
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+    this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+    this.canvas.addEventListener('mouseleave', this.handleMouseUp.bind(this));
     this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
 
     // Add keyboard listener for combat animation controls
@@ -56,6 +62,15 @@ export class InputHandler {
 
     this.game.state.mouseX = x;
     this.game.state.mouseY = y;
+
+    // Handle slider dragging
+    if (this.draggingSlider && this.game.state.volumeMixer) {
+      const slider = this.draggingSlider === 'music'
+        ? this.game.state.volumeMixer.musicSlider
+        : this.game.state.volumeMixer.effectsSlider;
+      this.updateSliderValue(x, slider, this.draggingSlider);
+      return;
+    }
 
     // Handle menu phase hover
     if (this.game.state.phase === 'menu') {
@@ -532,6 +547,62 @@ export class InputHandler {
     const boardWidth = this.getCSSWidth() * 0.6; // Left 60%
     const boardHeight = this.getCSSHeight();
     return { x: x + boardWidth / 2, y: y + boardHeight / 2 };
+  }
+
+  /**
+   * Handle mouse down for volume slider dragging
+   */
+  private handleMouseDown(event: MouseEvent): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const scale = getScale();
+
+    const mixer = this.game.state.volumeMixer;
+    if (!mixer) return;
+
+    // Check if clicking on music slider area (include handle radius)
+    const handleRadius = 7 * scale;
+    if (x >= mixer.musicSlider.x - handleRadius &&
+        x <= mixer.musicSlider.x + mixer.musicSlider.width + handleRadius &&
+        y >= mixer.musicSlider.y - handleRadius &&
+        y <= mixer.musicSlider.y + mixer.musicSlider.height + handleRadius) {
+      this.draggingSlider = 'music';
+      this.updateSliderValue(x, mixer.musicSlider, 'music');
+      return;
+    }
+
+    // Check if clicking on effects slider area
+    if (x >= mixer.effectsSlider.x - handleRadius &&
+        x <= mixer.effectsSlider.x + mixer.effectsSlider.width + handleRadius &&
+        y >= mixer.effectsSlider.y - handleRadius &&
+        y <= mixer.effectsSlider.y + mixer.effectsSlider.height + handleRadius) {
+      this.draggingSlider = 'effects';
+      this.updateSliderValue(x, mixer.effectsSlider, 'effects');
+      return;
+    }
+  }
+
+  /**
+   * Handle mouse up to stop slider dragging
+   */
+  private handleMouseUp(_event: MouseEvent): void {
+    this.draggingSlider = null;
+  }
+
+  /**
+   * Update slider value based on x position
+   */
+  private updateSliderValue(x: number, slider: { x: number; width: number }, type: 'music' | 'effects'): void {
+    const value = Math.max(0, Math.min(1, (x - slider.x) / slider.width));
+
+    if (type === 'music') {
+      getMusicManager().setVolume(value);
+    } else {
+      getSoundManager().setVolume(value);
+    }
+
+    this.game.update();
   }
 
   /**

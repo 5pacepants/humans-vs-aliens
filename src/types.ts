@@ -130,4 +130,9 @@ export interface GameState {
     startTime: number;    // When shake started
     duration: number;     // How long to shake (ms)
   };
+  // Volume mixer slider positions
+  volumeMixer?: {
+    musicSlider: { x: number; y: number; width: number; height: number };
+    effectsSlider: { x: number; y: number; width: number; height: number };
+  };
 }

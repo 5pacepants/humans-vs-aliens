@@ -3,6 +3,8 @@
 import type { GameState } from './types';
 import { CardRenderer } from './CardRenderer';
 import { getScale, getCardWidth, getCardHeight, getSmallCardWidth, getSmallCardHeight } from './Scale';
+import { getMusicManager } from './MusicManager';
+import { getSoundManager } from './SoundManager';
 
 export class GameUI {
   private ctx: CanvasRenderingContext2D;
@@ -1002,6 +1004,84 @@ export class GameUI {
 
       this.ctx.restore();
     }
+
+    // Volume mixer in bottom left corner
+    this.renderVolumeMixer(gameState);
+  }
+
+  /**
+   * Render volume mixer controls in bottom left corner
+   */
+  private renderVolumeMixer(gameState: GameState): void {
+    const scale = getScale();
+    const mixerX = 15 * scale;
+    const mixerY = window.innerHeight - 90 * scale;
+    const sliderWidth = 100 * scale;
+    const sliderHeight = 8 * scale;
+    const labelWidth = 55 * scale;
+
+    // Background panel
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    this.roundedRect(this.ctx, mixerX - 8 * scale, mixerY - 12 * scale, labelWidth + sliderWidth + 30 * scale, 80 * scale, 8 * scale);
+    this.ctx.fill();
+
+    // Music slider
+    const musicY = mixerY;
+    const musicVolume = getMusicManager().getVolume();
+
+    this.ctx.fillStyle = '#AAAAAA';
+    this.ctx.font = `${12 * scale}px Quicksand, sans-serif`;
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('Music', mixerX, musicY + sliderHeight / 2);
+
+    // Slider track
+    const trackX = mixerX + labelWidth;
+    this.ctx.fillStyle = '#444444';
+    this.roundedRect(this.ctx, trackX, musicY, sliderWidth, sliderHeight, sliderHeight / 2);
+    this.ctx.fill();
+
+    // Slider fill
+    this.ctx.fillStyle = '#4A9EFF';
+    this.roundedRect(this.ctx, trackX, musicY, sliderWidth * musicVolume, sliderHeight, sliderHeight / 2);
+    this.ctx.fill();
+
+    // Slider handle
+    const handleX = trackX + sliderWidth * musicVolume;
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.beginPath();
+    this.ctx.arc(handleX, musicY + sliderHeight / 2, 7 * scale, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    // Effects slider
+    const effectsY = mixerY + 30 * scale;
+    const effectsVolume = getSoundManager().getVolume();
+
+    this.ctx.fillStyle = '#AAAAAA';
+    this.ctx.fillText('Effects', mixerX, effectsY + sliderHeight / 2);
+
+    // Slider track
+    this.ctx.fillStyle = '#444444';
+    this.roundedRect(this.ctx, trackX, effectsY, sliderWidth, sliderHeight, sliderHeight / 2);
+    this.ctx.fill();
+
+    // Slider fill
+    this.ctx.fillStyle = '#4AFF4A';
+    this.roundedRect(this.ctx, trackX, effectsY, sliderWidth * effectsVolume, sliderHeight, sliderHeight / 2);
+    this.ctx.fill();
+
+    // Slider handle
+    const effectsHandleX = trackX + sliderWidth * effectsVolume;
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.beginPath();
+    this.ctx.arc(effectsHandleX, effectsY + sliderHeight / 2, 7 * scale, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    // Store slider positions in gameState for input handling
+    gameState.volumeMixer = {
+      musicSlider: { x: trackX, y: musicY, width: sliderWidth, height: sliderHeight },
+      effectsSlider: { x: trackX, y: effectsY, width: sliderWidth, height: sliderHeight }
+    };
   }
 
   /**

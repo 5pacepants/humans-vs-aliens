@@ -1,6 +1,7 @@
 // Combat Animation Queue - manages sequential playback of combat events
 
 import type { Hex, PlacedCharacter, GameState } from './types';
+import { getSoundManager } from './SoundManager';
 
 // Event types for combat animation
 export type CombatEventType = 'ability' | 'attack' | 'damage' | 'block' | 'death' | 'resurrect' | 'result';
@@ -303,6 +304,7 @@ export class CombatAnimationQueue {
           { hex: event.source.hex, color: 'orange', intensity: 0 },
           { hex: event.target.hex, color: 'orange', intensity: 0 },
         ];
+        getSoundManager().playAbilityTriggerSound();
         break;
 
       case 'attack':
@@ -346,6 +348,12 @@ export class CombatAnimationQueue {
           opacity: 0,
           spriteOpacity: 1,
         };
+        // Play death sound based on faction
+        if (event.target.card.faction === 'human') {
+          getSoundManager().playHumanDeathSound();
+        } else {
+          getSoundManager().playAlienDeathSound();
+        }
         break;
 
       case 'resurrect':
@@ -359,6 +367,12 @@ export class CombatAnimationQueue {
       case 'result':
         // Result doesn't need animation, just advance
         this.animationState.currentPhase = 'idle';
+        // Play win/lose sound based on result
+        if (event.winner === 'human') {
+          getSoundManager().playHumansWinSound();
+        } else if (event.winner === 'alien') {
+          getSoundManager().playHumansLoseSound();
+        }
         break;
     }
   }
@@ -459,6 +473,9 @@ export class CombatAnimationQueue {
           this.animationState.currentPhase = 'move_attack';
           this.animationState.phaseStartTime = performance.now();
           this.animationState.phaseProgress = 0;
+          // Play attack sound for the attacker
+          const attackEvent = event as AttackEvent;
+          getSoundManager().playAttackSound(attackEvent.attacker.card.name);
           this.animationFrameId = requestAnimationFrame(this.tick);
           return;
         }

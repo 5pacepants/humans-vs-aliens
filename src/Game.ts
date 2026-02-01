@@ -5,6 +5,7 @@ import type { AbilityEvent, AttackEvent, DamageEvent, BlockEvent, DeathEvent, Re
 import { CombatAnimationQueue } from './CombatAnimationQueue';
 import { computeDerivedStats } from './abilities/AbilityEngine';
 import { AIController, AIStrategyMedium } from './ai';
+import { getSoundManager } from './SoundManager';
 
 export class Game {
   state: GameState;
@@ -357,6 +358,7 @@ export class Game {
     if (deck.length > 0) {
       const numToDraw = Math.min(3, deck.length);
       this.state.drawnCards = deck.splice(0, numToDraw); // Draw up to 3
+      getSoundManager().playCardDrawSound();
       this.onUpdate();
     }
   }
@@ -367,6 +369,8 @@ export class Game {
       this.state.selectedCard = card;
       this.state.drawnCardsBackup = [...this.state.drawnCards]; // Save backup before clearing
       this.state.drawnCards = []; // Clear drawn after selection
+      // Play character sound effect
+      getSoundManager().playCharacterSound(card.name);
       this.onUpdate();
     }
   }
@@ -376,6 +380,7 @@ export class Game {
     const hex = this.state.board.find(h => h.q === q && h.r === r);
     if (hex && !hex.isMountain && this.canPlaceAt(hex)) {
       this.state.placedCharacters.push({ hex, card: this.state.selectedCard });
+      getSoundManager().playCardPlaceSound();
       this.state.selectedCard = undefined;
       // Clear drawn cards after placement
       this.state.drawnCards = [];
@@ -387,6 +392,11 @@ export class Game {
       // Check if placement done
       const humanPlaced = this.state.placedCharacters.filter(pc => pc.card.faction === 'human').length;
       const alienPlaced = this.state.placedCharacters.filter(pc => pc.card.faction === 'alien').length;
+
+      // Play sound when first human is placed this match
+      if (humanPlaced === 1 && this.state.placedCharacters[this.state.placedCharacters.length - 1].card.faction === 'human') {
+        getSoundManager().playFirstHumanPlacedSound();
+      }
       if (humanPlaced >= 15 && alienPlaced >= 15) {
         this.state.phase = 'combat';
         this.startCombat();
@@ -413,6 +423,7 @@ export class Game {
   skipEvent() {
     const skips = this.state.currentPlayer === 'human' ? this.state.humanEventSkips : this.state.alienEventSkips;
     if (skips > 0 && this.state.drawnEvent) {
+      getSoundManager().playClickEventSound();
       if (this.state.currentPlayer === 'human') {
         this.state.humanEventSkips--;
       } else {
@@ -431,6 +442,7 @@ export class Game {
 
   playEvent() {
     if (!this.state.drawnEvent) return;
+    getSoundManager().playClickEventSound();
 
     const event = this.state.drawnEvent;
 
@@ -602,6 +614,7 @@ export class Game {
 
   applyEventToTarget(q: number, r: number) {
     if (!this.state.eventTargetMode || !this.state.drawnEvent) return;
+    getSoundManager().playCardPlaceSound();
 
     const event = this.state.drawnEvent;
 
