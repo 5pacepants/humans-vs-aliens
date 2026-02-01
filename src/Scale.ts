@@ -13,9 +13,9 @@ export function getScale(): number {
 
 // Base sizes (at reference resolution)
 // These are sized to fit: 3 cards in 40% width, hex board in 60% width
-export const BASE_HEX_SIZE = 75;
-export const BASE_CARD_WIDTH = 220;
-export const BASE_CARD_HEIGHT = 353;
+export const BASE_HEX_SIZE = 83; // 75 * 1.1 = 10% larger
+export const BASE_CARD_WIDTH = 242; // 220 * 1.1 = 10% larger
+export const BASE_CARD_HEIGHT = 388; // 353 * 1.1 = 10% larger
 export const BASE_SMALL_CARD_WIDTH = 230; // 15% larger
 export const BASE_SMALL_CARD_HEIGHT = 368; // 15% larger
 

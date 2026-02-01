@@ -202,11 +202,12 @@ export class Game {
     const deck: CharacterCard[] = [];
     for (let i = 0; i < 20; i++) {
       const idx = Math.floor(Math.random() * weighted.length);
-      // Kopiera kortet och ge unikt id
+      // Deep copy kortet så varje kort har egna stats
       const base = weighted[idx];
       deck.push({
         ...base,
-        id: base.id + '_' + i
+        id: base.id + '_' + i,
+        stats: { ...base.stats }
       });
     }
     return deck;
@@ -298,10 +299,12 @@ export class Game {
     const deck: CharacterCard[] = [];
     for (let i = 0; i < 20; i++) {
       const idx = Math.floor(Math.random() * weighted.length);
+      // Deep copy kortet så varje kort har egna stats
       const base = weighted[idx];
       deck.push({
         ...base,
-        id: base.id + '_' + i
+        id: base.id + '_' + i,
+        stats: { ...base.stats }
       });
     }
     return deck;
