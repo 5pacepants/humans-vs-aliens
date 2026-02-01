@@ -17,11 +17,12 @@ export class CardRenderer {
   private assetLoader: CardAssetLoader;
   private offscreenCanvas: HTMLCanvasElement;
   private offscreenCtx: CanvasRenderingContext2D;
-  private readonly SUPERSAMPLING_SCALE = 4; // 4x rendering for better quality when downscaling high-res images
+  private readonly SUPERSAMPLING_SCALE = 2; // 2x supersampling
 
   // Glitter particles cache per card (using card id as key)
   private glitterParticles: Map<string, GlitterParticle[]> = new Map();
-  private readonly GLITTER_PARTICLE_COUNT = 12;
+  private readonly GLITTER_PARTICLE_COUNT = 25; // Base count for rareness 3
+  private readonly GLITTER_PARTICLE_COUNT_LEGENDARY = 45; // More for rareness 4
 
   constructor() {
     this.assetLoader = new CardAssetLoader();
@@ -37,22 +38,24 @@ export class CardRenderer {
   /**
    * Generate glitter particles for a card
    */
-  private getGlitterParticles(cardId: string, width: number, height: number): GlitterParticle[] {
-    if (!this.glitterParticles.has(cardId)) {
+  private getGlitterParticles(cardId: string, width: number, height: number, isLegendary: boolean = false): GlitterParticle[] {
+    const cacheKey = `${cardId}_${isLegendary ? 'legendary' : 'normal'}`;
+    if (!this.glitterParticles.has(cacheKey)) {
       const particles: GlitterParticle[] = [];
-      for (let i = 0; i < this.GLITTER_PARTICLE_COUNT; i++) {
+      const count = isLegendary ? this.GLITTER_PARTICLE_COUNT_LEGENDARY : this.GLITTER_PARTICLE_COUNT;
+      for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * width,
           y: Math.random() * height,
-          size: 2 + Math.random() * 4,
+          size: isLegendary ? (3 + Math.random() * 5) : (2 + Math.random() * 4),
           phase: Math.random() * Math.PI * 2,
-          speed: 0.5 + Math.random() * 1.5,
-          brightness: 0.3 + Math.random() * 0.7
+          speed: isLegendary ? (2 + Math.random() * 3) : (1.5 + Math.random() * 2.5), // Faster animation
+          brightness: isLegendary ? (0.5 + Math.random() * 0.5) : (0.4 + Math.random() * 0.6)
         });
       }
-      this.glitterParticles.set(cardId, particles);
+      this.glitterParticles.set(cacheKey, particles);
     }
-    return this.glitterParticles.get(cardId)!;
+    return this.glitterParticles.get(cacheKey)!;
   }
 
   /**
@@ -60,24 +63,19 @@ export class CardRenderer {
    * @param isLegendary - if true, uses enhanced rainbow effect for rareness 4
    */
   private drawGlitterEffect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, cardId: string, isEvent: boolean = false, isLegendary: boolean = false): void {
-    const particles = this.getGlitterParticles(cardId, width, height);
+    const particles = this.getGlitterParticles(cardId, width, height, isLegendary);
     const time = performance.now() / 1000;
 
     ctx.save();
 
     for (let i = 0; i < particles.length; i++) {
       const particle = particles[i];
-      // Calculate animated opacity using sine wave
-      const opacity = (Math.sin(time * particle.speed + particle.phase) + 1) / 2 * particle.brightness;
+      // Calculate animated opacity using sine wave - faster cycle
+      const opacity = (Math.sin(time * particle.speed * 2 + particle.phase) + 1) / 2 * particle.brightness;
 
       if (opacity > 0.1) {
-        let glowMultiplier = 1;
-        let sizeMultiplier = 1;
-
-        if (isLegendary) {
-          glowMultiplier = 1.5;
-          sizeMultiplier = 1.3;
-        }
+        let glowMultiplier = isLegendary ? 2.5 : 1.5;
+        let sizeMultiplier = isLegendary ? 1.5 : 1;
 
         const actualSize = particle.size * sizeMultiplier;
 
@@ -85,25 +83,31 @@ export class CardRenderer {
         ctx.beginPath();
         ctx.arc(x + particle.x, y + particle.y, actualSize, 0, Math.PI * 2);
 
-        // Glow effect - rainbow for legendary, gold/orange for others
+        // Glow effect - vibrant rainbow for legendary, gold/orange for others
         if (isLegendary) {
-          const hue = (time * 50 + i * 30) % 360;
-          ctx.shadowColor = `hsla(${hue}, 100%, 60%, ${opacity})`;
+          // Faster color cycling and more saturated colors
+          const hue = (time * 120 + i * 25) % 360;
+          ctx.shadowColor = `hsla(${hue}, 100%, 65%, ${opacity * 1.2})`;
+          // Add colored core for legendary
+          ctx.fillStyle = `hsla(${hue}, 80%, 85%, ${opacity})`;
         } else {
           const rgbColor = isEvent ? '255, 180, 80' : '255, 215, 100';
           ctx.shadowColor = `rgba(${rgbColor}, ${opacity})`;
+          ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
         }
-        ctx.shadowBlur = actualSize * 3 * glowMultiplier;
-
-        // Core sparkle
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctx.shadowBlur = actualSize * 4 * glowMultiplier;
         ctx.fill();
 
         // Draw a small cross/star shape for extra sparkle
-        if (opacity > 0.5) {
-          ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
-          ctx.lineWidth = isLegendary ? 1.5 : 1;
-          const crossSize = actualSize * 1.5;
+        if (opacity > 0.4) {
+          if (isLegendary) {
+            const hue = (time * 120 + i * 25) % 360;
+            ctx.strokeStyle = `hsla(${hue}, 70%, 90%, ${opacity * 0.9})`;
+          } else {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
+          }
+          ctx.lineWidth = isLegendary ? 2 : 1;
+          const crossSize = actualSize * (isLegendary ? 2 : 1.5);
 
           // Horizontal line
           ctx.beginPath();

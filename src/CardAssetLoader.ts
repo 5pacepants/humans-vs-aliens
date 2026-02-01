@@ -117,7 +117,16 @@ export class CardAssetLoader {
       characterPlaceholder: 'character-human-placeholder.png',
       characterAlienPlaceholder: 'character-alien-placeholder.png',
       characterEventPlaceholder: 'character-event-placeholder.png',
-      skipButton: 'skip-button.png'
+      skipButton: 'skip-button.png',
+      // Character images (JPG for smaller file size)
+      'general-johnson': 'general-johnson.jpg',
+      'hannah-honor': 'hannah-honor.jpg',
+      'nurse-tender': 'nurse-tender.jpg',
+      'heavy-gunner': 'heavy-gunner.jpg',
+      'elder-ktharr': 'elder-ktharr.jpg',
+      'Pilot-Frnuhuh': 'Pilot-Frnuhuh.jpg',
+      'mutant': 'mutant.jpg',
+      'warlord-vekkor': 'warlord-vekkor.jpg'
     };
     // If not a predefined asset, assume it's a character image filename
     if (filenames[assetKey]) {

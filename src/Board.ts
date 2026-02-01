@@ -729,6 +729,12 @@ export class Board {
       this.renderDeathX(x, y, animState.deathAnimation.opacity);
     }
 
+    // Render block animation (shield) - only if opacity is visible
+    if (animState.blockAnimation && animState.blockAnimation.opacity > 0.05) {
+      const { x, y } = this.hexToPixel(animState.blockAnimation.hex.q, animState.blockAnimation.hex.r);
+      this.renderBlockShield(x, y, animState.blockAnimation.opacity);
+    }
+
     // Combat message now displayed in right panel (GameUI.renderCombatLogPanel)
     // No longer rendering message box at bottom of board
   }
@@ -813,6 +819,63 @@ export class Board {
     this.ctx.beginPath();
     this.ctx.moveTo(x + size, y - size);
     this.ctx.lineTo(x - size, y + size);
+    this.ctx.stroke();
+
+    this.ctx.restore();
+  }
+
+  private renderBlockShield(x: number, y: number, opacity: number): void {
+    const scale = getScale();
+    const size = this.hexSize * 0.7;
+
+    this.ctx.save();
+    this.ctx.globalAlpha = opacity;
+
+    // Shadow/glow for visibility
+    this.ctx.shadowColor = '#00AAFF';
+    this.ctx.shadowBlur = 25 * scale;
+
+    // Draw shield shape
+    this.ctx.beginPath();
+    // Shield top (rounded)
+    this.ctx.moveTo(x, y - size);
+    this.ctx.quadraticCurveTo(x + size * 0.9, y - size * 0.8, x + size * 0.8, y - size * 0.2);
+    // Shield right side curving down to point
+    this.ctx.quadraticCurveTo(x + size * 0.7, y + size * 0.5, x, y + size);
+    // Shield left side (mirror)
+    this.ctx.quadraticCurveTo(x - size * 0.7, y + size * 0.5, x - size * 0.8, y - size * 0.2);
+    // Back to top
+    this.ctx.quadraticCurveTo(x - size * 0.9, y - size * 0.8, x, y - size);
+    this.ctx.closePath();
+
+    // Fill with gradient
+    const gradient = this.ctx.createLinearGradient(x, y - size, x, y + size);
+    gradient.addColorStop(0, 'rgba(100, 200, 255, 0.9)');
+    gradient.addColorStop(0.5, 'rgba(50, 150, 255, 0.8)');
+    gradient.addColorStop(1, 'rgba(0, 100, 200, 0.7)');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fill();
+
+    // Draw shield border
+    this.ctx.strokeStyle = '#FFFFFF';
+    this.ctx.lineWidth = 3 * scale;
+    this.ctx.stroke();
+
+    // Draw shield emblem (simple cross/plus)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    this.ctx.lineWidth = 4 * scale;
+    this.ctx.lineCap = 'round';
+
+    // Vertical line of cross
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, y - size * 0.4);
+    this.ctx.lineTo(x, y + size * 0.3);
+    this.ctx.stroke();
+
+    // Horizontal line of cross
+    this.ctx.beginPath();
+    this.ctx.moveTo(x - size * 0.3, y - size * 0.1);
+    this.ctx.lineTo(x + size * 0.3, y - size * 0.1);
     this.ctx.stroke();
 
     this.ctx.restore();

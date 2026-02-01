@@ -72,7 +72,7 @@ export interface AnimationState {
   isPlaying: boolean;
   isPaused: boolean;
   currentEventIndex: number;
-  currentPhase: 'idle' | 'highlight_attacker' | 'highlight_target' | 'move_attack' | 'show_damage' | 'show_effect' | 'fade_death';
+  currentPhase: 'idle' | 'highlight_attacker' | 'highlight_target' | 'move_attack' | 'show_damage' | 'show_effect' | 'fade_death' | 'fade_block';
   phaseProgress: number; // 0-1
   phaseStartTime: number;
 
@@ -104,6 +104,12 @@ export interface AnimationState {
     opacity: number; // For X fade-in
     spriteOpacity: number; // For sprite fade-out
   };
+
+  // Block animation
+  blockAnimation?: {
+    hex: Hex;
+    opacity: number; // For shield fade-in/out
+  };
 }
 
 // Timing configuration (in milliseconds)
@@ -112,6 +118,7 @@ export interface AnimationTiming {
   attackMoveDuration: number;
   damageDuration: number;
   deathDuration: number;
+  blockDuration: number;
   delayBetweenEvents: number;
 }
 
@@ -120,6 +127,7 @@ const DEFAULT_TIMING: AnimationTiming = {
   attackMoveDuration: 800,     // Was 400
   damageDuration: 1000,        // Was 500
   deathDuration: 1600,         // Was 800
+  blockDuration: 1200,         // Shield fade in/out duration
   delayBetweenEvents: 400,     // Was 200
 };
 
@@ -271,6 +279,8 @@ export class CombatAnimationQueue {
         return this.timing.highlightDuration;
       case 'fade_death':
         return this.timing.deathDuration;
+      case 'fade_block':
+        return this.timing.blockDuration;
       case 'idle':
       default:
         return this.timing.delayBetweenEvents;
@@ -284,6 +294,7 @@ export class CombatAnimationQueue {
     this.animationState.spriteOffset = undefined;
     this.animationState.floatingDamage = undefined;
     this.animationState.deathAnimation = undefined;
+    this.animationState.blockAnimation = undefined;
 
     switch (event.type) {
       case 'ability':
@@ -318,10 +329,14 @@ export class CombatAnimationQueue {
         break;
 
       case 'block':
-        this.animationState.currentPhase = 'show_effect';
+        this.animationState.currentPhase = 'fade_block';
         this.animationState.highlightedHexes = [
           { hex: event.blockerHex, color: 'blue', intensity: 0 },
         ];
+        this.animationState.blockAnimation = {
+          hex: event.blockerHex,
+          opacity: 0,
+        };
         break;
 
       case 'death':
@@ -402,6 +417,20 @@ export class CombatAnimationQueue {
       this.animationState.deathAnimation.opacity = Math.min(progress * 2, 1); // X fades in
       this.animationState.deathAnimation.spriteOpacity = Math.max(1 - progress, 0); // Sprite fades out
     }
+
+    // Update block animation (fade in, hold, fade out)
+    if (this.animationState.blockAnimation) {
+      if (progress < 0.3) {
+        // Fade in (0-30%)
+        this.animationState.blockAnimation.opacity = progress / 0.3;
+      } else if (progress < 0.7) {
+        // Hold (30-70%)
+        this.animationState.blockAnimation.opacity = 1;
+      } else {
+        // Fade out (70-100%)
+        this.animationState.blockAnimation.opacity = 1 - ((progress - 0.7) / 0.3);
+      }
+    }
   }
 
   private advancePhase(): void {
@@ -434,6 +463,16 @@ export class CombatAnimationQueue {
           return;
         }
         break;
+
+      case 'block':
+        // Clear block animation immediately when phase completes
+        this.animationState.blockAnimation = undefined;
+        break;
+
+      case 'death':
+        // Clear death animation immediately when phase completes
+        this.animationState.deathAnimation = undefined;
+        break;
     }
 
     // Default: advance to next event
@@ -451,6 +490,7 @@ export class CombatAnimationQueue {
       this.animationState.spriteOffset = undefined;
       this.animationState.floatingDamage = undefined;
       this.animationState.deathAnimation = undefined;
+      this.animationState.blockAnimation = undefined;
       this.onUpdate();
       this.onComplete();
       return;
@@ -461,6 +501,8 @@ export class CombatAnimationQueue {
     this.animationState.phaseStartTime = performance.now();
     this.animationState.phaseProgress = 0;
     this.animationState.highlightedHexes = [];
+    this.animationState.blockAnimation = undefined;
+    this.animationState.deathAnimation = undefined;
 
     setTimeout(() => {
       if (this.animationState.isPlaying && !this.animationState.isPaused) {

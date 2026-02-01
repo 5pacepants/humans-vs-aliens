@@ -123,6 +123,7 @@ export class Game {
         faction: 'human',
         name: 'General Johnson',
         type: 'Commander',
+        image: 'general-johnson',
         stats: {
           health: 3,
           damage: 2,
@@ -236,6 +237,7 @@ export class Game {
         faction: 'alien',
         name: "Elder K'tharr",
         type: 'Commander',
+        image: 'elder-ktharr',
         stats: {
           health: 3,
           damage: 2,
@@ -308,7 +310,7 @@ export class Game {
   private getRandomCharacter(faction: 'human' | 'alien'): CharacterCard {
     // Character pools (same as deck creation)
     const humanPool: CharacterCard[] = [
-      { id: 'h_commander', faction: 'human', name: 'General Johnson', type: 'Commander', stats: { health: 3, damage: 2, range: 2, attacks: 2, initiative: 3, points: 1, rareness: 3, ability: 'All adjacent humans has +1 attack' } },
+      { id: 'h_commander', faction: 'human', name: 'General Johnson', type: 'Commander', image: 'general-johnson', stats: { health: 3, damage: 2, range: 2, attacks: 2, initiative: 3, points: 1, rareness: 3, ability: 'All adjacent humans has +1 attack' } },
       { id: 'h_sniper', faction: 'human', name: 'Hannah Honor', type: 'Sniper', image: 'hannah-honor', stats: { health: 1, damage: 1, range: 4, attacks: 2, initiative: 2, points: 2, rareness: 4, ability: 'If only adjacent to one more character, gain +1 damage' } },
       { id: 'h_medic', faction: 'human', name: 'Nurse Tender', type: 'Medic', image: 'nurse-tender', stats: { health: 5, damage: 1, range: 1, attacks: 1, initiative: 4, points: 0, rareness: 1, ability: 'Adjacent humans has a 20% chance to ressurect with one HP when killed.' } },
       { id: 'h_soldier', faction: 'human', name: 'Heavy Gunner Jack', type: 'Soldier', image: 'heavy-gunner', stats: { health: 1, damage: 4, range: 1, attacks: 1, initiative: 1, points: 2, rareness: 2, ability: 'Has a 50% chance to deal 1 extra damage.' } }
@@ -316,7 +318,7 @@ export class Game {
 
     const alienPool: CharacterCard[] = [
       { id: 'a_soldier', faction: 'alien', name: 'Pilot Frnuhuh', type: 'Soldier', image: 'Pilot-Frnuhuh', stats: { health: 2, damage: 3, range: 1, attacks: 2, initiative: 2, points: 1, rareness: 1, ability: 'If Frnuhuh has no adjacent aliens, he gains double the number of attacks' } },
-      { id: 'a_commander', faction: 'alien', name: "Elder K'tharr", type: 'Commander', stats: { health: 3, damage: 2, range: 1, attacks: 1, initiative: 1, points: 2, rareness: 4, ability: 'All adjacent enemies lose 1 range due to psychic interference. (To a minimum of 1 range)' } },
+      { id: 'a_commander', faction: 'alien', name: "Elder K'tharr", type: 'Commander', image: 'elder-ktharr', stats: { health: 3, damage: 2, range: 1, attacks: 1, initiative: 1, points: 2, rareness: 4, ability: 'All adjacent enemies lose 1 range due to psychic interference. (To a minimum of 1 range)' } },
       { id: 'a_medic', faction: 'alien', name: 'Mutant Vor', type: 'Medic', image: 'mutant', stats: { health: 2, damage: 3, range: 1, attacks: 1, initiative: 4, points: 2, rareness: 3, ability: 'Blocks the first attack he receives.' } },
       { id: 'a_sniper', faction: 'alien', name: 'Warlord Vekkor', type: 'Sniper', image: 'warlord-vekkor', stats: { health: 2, damage: 3, range: 5, attacks: 1, initiative: 3, points: 0, rareness: 2, ability: 'Increases the range of adjacent friendly aliens by +1.' } }
     ];
@@ -451,6 +453,10 @@ export class Game {
 
           const oldHealth = target.card.stats.health;
           target.card.stats.health -= 1;
+          // Sync derived health so HP display updates
+          if (target.derived) {
+            target.derived.health = target.card.stats.health;
+          }
           const newHealth = target.card.stats.health;
 
           // Track which events have affected this character
@@ -858,6 +864,10 @@ export class Game {
       }
       if (damage > 0) {
         target.card.stats.health -= damage;
+        // Sync derived health so HP display updates
+        if (target.derived) {
+          target.derived.health = target.card.stats.health;
+        }
         if (this.state.battleLog) {
           this.state.battleLog.push(`${target.card.name} loses ${damage} health.`);
         }
@@ -1174,6 +1184,10 @@ export class Game {
           } else {
             // Apply damage
             closestEnemy.card.stats.health -= damage;
+            // Sync derived health so HP display updates
+            if (closestEnemy.derived) {
+              closestEnemy.derived.health = closestEnemy.card.stats.health;
+            }
             const damageMessage = `${nameMap.get(closestEnemy.card)} loses ${damage} health.`;
             this.state.battleLog.push(damageMessage);
             this.state.combatEvents.push({
@@ -1201,6 +1215,10 @@ export class Game {
 
                 if (adjacentNurses.length > 0 && Math.random() < 0.2) {
                   closestEnemy.card.stats.health = 1;
+                  // Sync derived health so HP display updates
+                  if (closestEnemy.derived) {
+                    closestEnemy.derived.health = 1;
+                  }
                   resurrected = true;
                   const resurrectMessage = `${nameMap.get(closestEnemy.card)} is resurrected by ${nameMap.get(adjacentNurses[0].card)} with 1 HP!`;
                   this.state.battleLog.push(resurrectMessage);

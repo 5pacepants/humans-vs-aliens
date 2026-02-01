@@ -2,6 +2,7 @@ import { Board } from './Board';
 import { GameUI } from './GameUI';
 import { Game } from './Game';
 import { InputHandler } from './InputHandler';
+import { getMusicManager } from './MusicManager';
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 // Use device pixel ratio for sharp rendering on high-DPI displays
@@ -34,6 +35,9 @@ const game = new Game(render);
 const board = new Board(canvas, game.state);
 const ui = new GameUI(canvas);
 new InputHandler(canvas, game);
+
+// Initialize background music (will start on first user interaction)
+getMusicManager();
 
 function updateScreenShake(): { offsetX: number; offsetY: number } {
   const shake = game.state.screenShake;
